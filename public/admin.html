@@ -65,9 +65,7 @@ async function boot() {
     state.s = await NC.api('/api/admin/state');
     $('login').classList.add('hidden');
     $('app').classList.remove('hidden');
-    $('logo').innerHTML = NC.logo(38);
-    $('logo').querySelector('.serif').style.color = 'var(--champagne)';
-    $('logo').querySelector('.mono').style.color = 'rgba(220,192,166,.55)';
+    $('logo').innerHTML = NC.logo(46);
     render();
   } catch (e) { /* нет токена — остаётся форма входа */ }
 }
