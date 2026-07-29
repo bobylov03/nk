@@ -72,7 +72,8 @@ td{padding:11px 10px;border-top:1px solid var(--line);font-size:13px;vertical-al
 /* лендинг */
 .nav{position:sticky;top:0;z-index:5;flex-wrap:wrap;display:flex;align-items:center;justify-content:space-between;gap:24px;
   padding:16px 40px;background:rgba(246,235,221,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
-.nav nav{display:flex;gap:26px;font-size:13.5px;white-space:nowrap}
+.nav nav{display:flex;gap:26px;font-size:15px;white-space:nowrap}
+.nav .btn{font-size:11.5px;padding:11px 21px}
 .hero{background:linear-gradient(160deg,#fbf6ef,#f2e5d6);padding:80px 40px;display:grid;grid-template-columns:1.05fr .95fr;gap:48px;align-items:center}
 .hero-photo{width:320px;height:320px;border-radius:32px;background:center/cover no-repeat;box-shadow:0 24px 60px rgba(74,36,61,.22);justify-self:center}
 .section{padding:72px 40px;display:flex;flex-direction:column;gap:26px}

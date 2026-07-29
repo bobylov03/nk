@@ -33,7 +33,11 @@ const NC = {
     return new Date(iso).toLocaleDateString('ru-RU', opts || { day: 'numeric', month: 'long' });
   },
   logo(size) {
-    return `<span class="logo"><span class="mark" ${size ? `style="width:${size}px;height:${size}px"` : ''}><span style="display:flex;flex-direction:column;align-items:center;gap:1px"><b>NC</b><s>meals</s></span></span>
-      <span class="col"><span class="serif" style="font-size:17px">NC meals</span><span class="mono" style="font-size:7.5px">TBILISI</span></span></span>`;
+    const s = size || 58;
+    return `<span class="logo"><span class="mark" style="width:${s}px;height:${s}px">
+      <span style="display:flex;flex-direction:column;align-items:center;gap:1px">
+        <b style="font-size:${Math.round(s * 0.41)}px">NC</b>
+        <s style="font-size:${Math.round(s * 0.135)}px">meals</s>
+      </span></span></span>`;
   }
 };
