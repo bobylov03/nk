@@ -2,9 +2,15 @@
   "name": "nc-meals",
   "version": "1.0.0",
   "private": true,
-  "description": "NC meals — сайт, оформление рациона, личный кабинет и админ-панель",
+  "description": "NC meals — рационы с доставкой по Тбилиси",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "dev": "netlify dev"
   },
-  "engines": { "node": ">=18" }
+  "dependencies": {
+    "@netlify/blobs": "^8.1.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
 }
