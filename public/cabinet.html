@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NC meals — личный кабинет</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=Jost:wght@300;400;500&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/nc.css">
+</head>
+<body>
+<div class="phone">
+  <div id="login" class="col" style="gap:16px;padding:60px 24px">
+    <h1 class="serif" style="font-size:30px">Личный кабинет</h1>
+    <span class="muted" style="font-size:13.5px;line-height:1.6">Введите телефон, указанный при оформлении рациона. В демо-данных есть <b>+995 555 12 34 56</b>.</span>
+    <label><span class="mono">Телефон</span><input id="phone" placeholder="+995 555 12 34 56"></label>
+    <button class="btn wide" id="enter">Войти</button>
+    <a href="/" style="font-size:13px">На главную</a>
+  </div>
+
+  <div id="app" class="hidden" style="display:flex;flex-direction:column;flex:1">
+    <header>
+      <div class="row" style="justify-content:space-between">
+        <div class="col" style="gap:2px">
+          <span class="serif" id="hello" style="font-size:26px"></span>
+          <span class="mono" id="sub"></span>
+        </div>
+        <button class="btn ghost sm" id="exit" style="border-radius:100px">Выйти</button>
+      </div>
+    </header>
+    <main id="body"></main>
+    <div class="tabbar" id="tabs"></div>
+  </div>
+</div>
+
+<script src="/js/nc.js"></script>
+<script src="/js/dish-sheet.js"></script>
+<script>
+const CAT_ORDER = ['breakfast', 'lunch', 'dinner', 'snack'];
+const state = { tab: 'today', d: null, swap: null };
+const $ = (id) => document.getElementById(id);
+
+const RU = { breakfast: 'Завтрак', lunch: 'Обед', dinner: 'Ужин', snack: 'Перекус' };
+async function load() {
+  const id = NC.clientId();
+  if (!id) return;
+  try {
+    state.d = await NC.api('/api/client/' + id);
+    window.__dishes = (await NC.api('/api/dishes')).dishes.map(d => Object.assign({}, d, { catLabel: RU[d.cat] }));
+    $('login').classList.add('hidden');
+    $('app').classList.remove('hidden');
+    render();
+  } catch (e) { localStorage.removeItem('nc_client'); }
+}
+
+$('enter').onclick = async () => {
+  try {
+    const r = await NC.api('/api/client/login', { method: 'POST', body: { phone: $('phone').value } });
+    NC.setToken(r.token); NC.setClient(r.clientId);
+    load();
+  } catch (e) { NC.toast(e.message); }
+};
+$('exit').onclick = () => { localStorage.removeItem('nc_client'); location.reload(); };
+
+function render() {
+  const c = state.d.client;
+  $('hello').textContent = 'Здравствуйте, ' + c.name.split(' ')[0];
+  $('sub').textContent = 'NC · ' + c.planDays + ' дней · ' + NC.dateRu(state.d.today.date, { weekday: 'long', day: 'numeric', month: 'short' });
+  $('tabs').innerHTML = [['today', '◉', 'Сегодня'], ['tomorrow', '◐', 'Завтра'], ['calendar', '▤', 'Календарь'], ['profile', '◇', 'Профиль']]
+    .map(([id, ic, label]) => `<button class="${state.tab === id ? 'on' : ''}" data-tab="${id}"><span style="font-size:16px">${ic}</span>${label}</button>`).join('');
+  document.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => { state.tab = b.dataset.tab; render(); });
+  $('body').innerHTML = ({ today: viewToday, tomorrow: viewTomorrow, calendar: viewCalendar, profile: viewProfile })[state.tab]();
+  wire();
+  if (window.__dishes) bindSheet($('body'), window.__dishes);
+}
+
+function planCard() {
+  const c = state.d.client;
+  const pct = Math.round(c.daysLeft / Math.max(1, c.planDays) * 100);
+  return `<div class="card col" style="gap:16px">
+    <div class="row" style="justify-content:space-between">
+      <span class="mono">Рацион · осталось</span><span style="font-size:11px;letter-spacing:.1em">NC · ${c.planDays} дней</span>
+    </div>
+    <div class="row" style="gap:18px">
+      <div style="width:84px;height:84px;border-radius:50%;background:conic-gradient(var(--plum) ${pct}%, rgba(74,36,61,.12) 0);display:grid;place-items:center;flex:0 0 auto">
+        <div style="width:64px;height:64px;border-radius:50%;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center">
+          <span class="serif" style="font-size:26px;line-height:1">${c.daysLeft}</span><span class="mono" style="font-size:8px">ДНЕЙ</span>
+        </div>
+      </div>
+      <div class="col" style="gap:8px;flex:1">
+        <div class="row" style="justify-content:space-between;font-size:13px"><span>Следующая доставка</span><span>${c.paused ? 'перенесена' : 'завтра, ' + slotLabel(c.slot)}</span></div>
+        <div class="row" style="justify-content:space-between;font-size:13px"><span>Статус</span><span>${c.paused ? 'на паузе' : 'активен'}</span></div>
+        <div class="row" style="gap:8px">
+          <button class="btn ghost sm" id="pause" style="flex:1">${c.paused ? 'Возобновить' : 'Пауза'}</button>
+          <button class="btn sm" data-tab-jump="profile" style="flex:1">Продлить</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function slotLabel(id) {
+  return ({ s1: '08:00–09:00', s2: '09:00–10:00', s3: '10:00–11:00' })[id] || '08:00–09:00';
+}
+
+function mealRow(s, date, canSwap) {
+  return `<div class="meal" data-dish="${s.dish ? s.dish.id : ''}" style="cursor:pointer">
+    ${NC.tile(s.dish)}
+    <div class="col" style="gap:5px;flex:1;min-width:0">
+      <span class="mono" style="font-size:9px">${s.catLabel}</span>
+      <span class="serif" style="font-size:19px;line-height:1.15">${NC.esc(s.dish ? s.dish.name : 'уточняется')}</span>
+      <span class="muted" style="font-size:11px">${s.dish ? NC.macros(s.dish) + ' · ' + s.dish.weight + ' г' : ''}</span>
+    </div>
+    ${canSwap ? `<button class="btn ghost sm" data-swap="${s.cat}" data-date="${date}" style="padding:8px 12px;font-size:10px">Запросить замену</button>` : ''}
+  </div>`;
+}
+
+function requestNotice() {
+  const pending = state.d.requests.filter(r => r.status === 'pending');
+  if (!pending.length) return '';
+  return `<div class="card row" style="gap:10px;border-color:var(--gold)">
+    <span style="width:6px;height:6px;border-radius:50%;background:var(--plum)"></span>
+    <span style="font-size:12.5px;line-height:1.5">${pending.map(r => NC.esc(r.text)).join('; ')} — ждём подтверждения до 18:00.</span>
+  </div>`;
+}
+
+function viewToday() {
+  const t = state.d.today, n = state.d.norms;
+  const bars = [['Белки', t.totals.p, n.p, 'г'], ['Жиры', t.totals.f, n.f, 'г'], ['Углеводы', t.totals.c, n.c, 'г'], ['Калории', t.totals.kcal, n.kcal, 'ккал']];
+  return `<div class="col fade" style="gap:16px">
+    ${planCard()}
+    <div class="row" style="justify-content:space-between;align-items:baseline">
+      <span class="serif" style="font-size:22px">Меню на сегодня</span><span class="mono" style="font-size:9px">today’s menu</span>
+    </div>
+    ${requestNotice()}
+    ${t.slots.map(s => mealRow(s, t.date, false)).join('')}
+    <div class="card col dark" style="gap:14px;background:var(--plum);border:0">
+      <div class="row" style="justify-content:space-between;align-items:baseline">
+        <span class="serif" style="font-size:19px;color:var(--champagne)">КБЖУ дня</span>
+        <span class="mono" style="color:rgba(220,192,166,.6)">${t.totals.kcal} ккал из ${n.kcal}</span>
+      </div>
+      ${bars.map(([label, v, max, unit]) => `
+        <div class="col" style="gap:5px">
+          <div class="row" style="justify-content:space-between;font-size:11px;color:rgba(220,192,166,.85)"><span>${label}</span><span>${v} ${unit}</span></div>
+          <div class="bar"><i style="width:${Math.min(100, Math.round(v / max * 100))}%"></i></div>
+        </div>`).join('')}
+    </div>
+  </div>`;
+}
+
+function viewTomorrow() {
+  const t = state.d.tomorrow;
+  return `<div class="col fade" style="gap:16px">
+    <div class="row" style="justify-content:space-between;align-items:baseline">
+      <span class="serif" style="font-size:22px">Что будет завтра</span><span class="mono" style="font-size:9px">${NC.dateRu(t.date)}</span>
+    </div>
+    ${requestNotice()}
+    ${t.slots.map(s => mealRow(s, t.date, true)).join('')}
+    <div class="card" style="border-color:var(--gold);font-size:12px;line-height:1.5">Запросы на замену принимаются до 18:00 — каждую замену подтверждаем вручную.</div>
+    ${state.swap ? swapSheet() : ''}
+  </div>`;
+}
+
+function swapSheet() {
+  const cat = state.swap.cat;
+  const all = window.__dishes || [];
+  return `<div class="card col" style="gap:12px;border-color:var(--plum)">
+    <span class="serif" style="font-size:20px">Замена · ${({ breakfast: 'Завтрак', lunch: 'Обед', dinner: 'Ужин', snack: 'Перекус' })[cat]}</span>
+    <div class="col" style="gap:8px" id="swap-options">${all.filter(d => d.cat === cat).map(d => `
+      <div class="row" data-pick="${d.id}" style="gap:12px;padding:10px;border:1px solid var(--line);border-radius:12px;cursor:pointer">
+        ${NC.tile(d, 'sm')}
+        <span class="col" style="flex:1;gap:2px"><span class="serif" style="font-size:17px">${NC.esc(d.name)}</span><span class="muted" style="font-size:11px">${NC.macros(d)}</span></span>
+        <span class="mono" style="font-size:10px">Запросить</span>
+      </div>`).join('') || '<span class="muted" style="font-size:13px">Нет альтернатив в этой категории</span>'}</div>
+    <button class="btn ghost" id="swap-cancel">Отмена</button>
+  </div>`;
+}
+
+function viewCalendar() {
+  const c = state.d.client;
+  return `<div class="col fade" style="gap:16px">
+    <span class="serif" style="font-size:22px">Календарь доставок</span>
+    <div class="cal">${state.d.calendar.map(d => `
+      <div class="${[d.active ? 'active' : '', d.paused ? 'paused' : '', d.date === state.d.today.date ? 'today' : ''].join(' ')}">
+        <span>${d.day}</span><i></i>
+      </div>`).join('')}</div>
+    <div class="row muted" style="gap:16px;font-size:11px"><span>● доставка</span><span>● пауза</span><span>○ вне рациона</span></div>
+    <div class="card col" style="gap:12px">
+      <span class="mono">Адрес доставки</span>
+      <span style="font-size:14px">${NC.esc(c.address)}</span>
+      <span class="muted" style="font-size:12.5px">Окно: ${slotLabel(c.slot)}${c.notes ? ' · ' + NC.esc(c.notes) : ''}</span>
+      <div class="row" style="gap:8px">
+        <button class="btn ghost sm" id="pause" style="flex:1">${c.paused ? 'Возобновить' : 'Перенести доставку'}</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function viewProfile() {
+  const c = state.d.client;
+  return `<div class="col fade" style="gap:16px">
+    <span class="serif" style="font-size:22px">История заказов</span>
+    ${(state.d.history || []).map(h => `<div class="card row" style="justify-content:space-between">
+      <span class="col" style="gap:3px"><span class="serif" style="font-size:17px">${NC.esc(h.title)}</span><span class="muted" style="font-size:11px">${NC.esc(h.meta)}</span></span>
+      <span style="font-size:14px">${NC.money(h.sum)}</span></div>`).join('') || '<span class="muted" style="font-size:13px">Пока пусто</span>'}
+    <div class="card col dark" style="gap:10px;background:var(--plum);border:0">
+      <span class="serif" style="font-size:18px;color:var(--champagne)">Продлить подписку</span>
+      <div class="row" style="gap:8px">${state.d.tariffs.map(t => `
+        <button class="chip" data-extend="${t.id}" style="flex:1;flex-direction:column;background:transparent;border-color:rgba(220,192,166,.3);color:var(--champagne);padding:12px 6px">
+          <span class="serif" style="font-size:18px">${t.days} дней</span><span style="font-size:10px">${t.perDay} ${NC.cur}/день</span>
+        </button>`).join('')}</div>
+      <span class="muted" style="font-size:12px;line-height:1.5">Продление тоже проходит через подтверждение — оплата откроется после согласования.</span>
+    </div>
+  </div>`;
+}
+
+function wire() {
+  const id = state.d.client.id;
+  const pause = $('pause');
+  if (pause) pause.onclick = async () => {
+    try { await NC.api('/api/client/' + id + '/pause', { method: 'POST', body: {} }); NC.toast('Запрос отправлен'); state.d = await NC.api('/api/client/' + id); render(); }
+    catch (e) { NC.toast(e.message); }
+  };
+  document.querySelectorAll('[data-tab-jump]').forEach(b => b.onclick = () => { state.tab = b.dataset.tabJump; render(); });
+  document.querySelectorAll('[data-swap]').forEach(b => b.onclick = async () => {
+    if (!window.__dishes) window.__dishes = (await NC.api('/api/dishes')).dishes;
+    state.swap = { cat: b.dataset.swap, date: b.dataset.date };
+    render();
+  });
+  const cancel = $('swap-cancel');
+  if (cancel) cancel.onclick = () => { state.swap = null; render(); };
+  document.querySelectorAll('[data-pick]').forEach(b => b.onclick = async () => {
+    try {
+      await NC.api('/api/client/' + id + '/swap', { method: 'POST', body: { cat: state.swap.cat, date: state.swap.date, dishId: b.dataset.pick } });
+      state.swap = null; NC.toast('Запрос замены отправлен');
+      state.d = await NC.api('/api/client/' + id); render();
+    } catch (e) { NC.toast(e.message); }
+  });
+  document.querySelectorAll('[data-extend]').forEach(b => b.onclick = async () => {
+    try {
+      const r = await NC.api('/api/client/' + id + '/extend', { method: 'POST', body: { tariffId: b.dataset.extend } });
+      location.href = '/order.html?order=' + r.order.id;
+    } catch (e) { NC.toast(e.message); }
+  });
+}
+
+load();
+</script>
+</body>
+</html>

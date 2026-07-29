@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NC meals — рацион на каждый день</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=Jost:wght@300;400;500&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/nc.css">
+</head>
+<body>
+
+<div class="nav">
+  <a href="/" style="border:0" id="logo"></a>
+  <nav>
+    <a href="#menu" style="border:0">Меню дня</a>
+    <a href="#how" style="border:0">Как это работает</a>
+    <a href="#tariffs" style="border:0">Тарифы</a>
+    <a href="#delivery" style="border:0">Доставка</a>
+  </nav>
+  <div class="row" style="gap:10px">
+    <a class="btn ghost sm" href="/cabinet.html" style="border-bottom:1px solid rgba(74,36,61,.28)">Личный кабинет</a>
+    <a class="btn sm" href="/order.html" style="border:0">Оформить рацион</a>
+  </div>
+</div>
+
+<div class="hero">
+  <div class="col" style="gap:22px">
+    <span class="mono" id="kicker"></span>
+    <h1 id="title" style="font-size:54px;max-width:15em;text-wrap:pretty"></h1>
+    <p id="text" style="margin:0;font-size:16px;line-height:1.6;max-width:30em"></p>
+    <a class="btn" id="cta" href="/order.html" style="align-self:flex-start;border:0"></a>
+  </div>
+  <div class="hero-photo" style="background-image:url('/img/food-toast.jpg')"></div>
+</div>
+
+<div class="section" id="menu">
+  <div class="row" style="justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:16px">
+    <div class="col" style="gap:8px">
+      <span class="mono" id="menu-day"></span>
+      <h2 style="font-size:38px">Меню сегодняшнего дня</h2>
+    </div>
+    <span class="muted" id="menu-note" style="font-size:13.5px;max-width:26em;text-align:right"></span>
+  </div>
+  <div class="grid" id="menu-grid" style="grid-template-columns:repeat(4,minmax(0,1fr))"></div>
+  <span class="muted" style="font-size:12.5px">Нажмите на блюдо — откроются состав, КБЖУ, аллергены и почему оно сегодня в рационе.</span>
+</div>
+
+<div class="about" id="about">
+  <div class="ph" id="about-photo"><span class="mono" style="line-height:2.2">ФОТО ШЕФА<br>квадрат, как в инстаграме</span></div>
+  <div class="col" style="gap:16px">
+    <span class="mono" id="about-kicker"></span>
+    <h2 style="font-size:38px" id="about-title"></h2>
+    <p class="muted" style="margin:0;font-size:15px;line-height:1.7;max-width:34em" id="about-text"></p>
+    <span class="serif" style="font-size:20px" id="about-sign"></span>
+  </div>
+</div>
+
+<div class="section silk" id="how">
+  <h2 style="font-size:38px">Как это работает</h2>
+  <div class="grid" id="steps" style="grid-template-columns:repeat(4,minmax(0,1fr))"></div>
+</div>
+
+<div class="section" id="tariffs">
+  <div class="row" style="justify-content:space-between;align-items:flex-end">
+    <h2 style="font-size:38px">Тарифы</h2>
+    <span class="muted" style="font-size:13.5px">Чем дольше рацион — тем ниже цена дня</span>
+  </div>
+  <div class="grid" id="tariff-grid" style="grid-template-columns:repeat(3,minmax(0,1fr))"></div>
+</div>
+
+<div class="section dark" id="delivery" style="flex-direction:row;align-items:center;justify-content:space-between;gap:40px;flex-wrap:wrap">
+  <div class="col" style="gap:12px;max-width:36em">
+    <h2 style="font-size:34px;color:var(--champagne)" id="del-title"></h2>
+    <span class="muted" style="font-size:14px;line-height:1.6" id="del-text"></span>
+  </div>
+  <a class="btn light" href="/order.html" style="border:0">Оформить доставку</a>
+</div>
+
+<div class="footer">
+  <span class="mono">MEALS MADE AROUND YOU</span>
+  <span class="mono" id="footer"></span>
+</div>
+
+<script src="/js/nc.js"></script>
+<script src="/js/dish-sheet.js"></script>
+<script>
+(async function () {
+  document.getElementById('logo').innerHTML = NC.logo();
+  const data = await NC.api('/api/public');
+  const c = data.content;
+  NC.cur = c.currency || '₾';
+  document.getElementById('kicker').textContent = c.hero_kicker;
+  document.getElementById('title').textContent = c.hero_title;
+  document.getElementById('text').textContent = c.hero_text;
+  document.getElementById('cta').textContent = c.hero_cta;
+  document.getElementById('menu-note').textContent = c.menu_note;
+  document.getElementById('del-title').textContent = c.delivery_title;
+  document.getElementById('del-text').textContent = c.delivery_text;
+  document.getElementById('footer').textContent = c.footer;
+  document.getElementById('menu-day').textContent = NC.dateRu(data.today.date, { weekday: 'long', day: 'numeric', month: 'long' });
+
+  ['about_kicker', 'about_title', 'about_text', 'about_sign'].forEach(k => {
+    const el = document.getElementById(k.replace('_', '-'));
+    if (el) el.textContent = c[k] || '';
+  });
+  if (c.about_photo) {
+    const ph = document.getElementById('about-photo');
+    ph.style.backgroundImage = "url('/img/" + c.about_photo + "')";
+    ph.style.border = '1px solid var(--gold)';
+    ph.innerHTML = '';
+  }
+
+  document.getElementById('menu-grid').innerHTML = data.today.slots.map(s => `
+    <div class="card col" data-dish="${s.dish ? s.dish.id : ''}" style="gap:14px;align-items:center;text-align:center;cursor:pointer">
+      ${NC.tile(s.dish, 'lg')}
+      <span class="mono">${s.catLabel}</span>
+      <span class="serif" style="font-size:21px;line-height:1.2">${NC.esc(s.dish ? s.dish.name : 'уточняется')}</span>
+      <span class="muted" style="font-size:12px">${s.dish ? NC.macros(s.dish) + ' · ' + s.dish.weight + ' г' : ''}</span>
+    </div>`).join('');
+
+  document.getElementById('steps').innerHTML = (c.steps || []).map(s => `
+    <div class="col" style="gap:12px;padding-top:18px;border-top:1px solid var(--gold)">
+      <span class="mono" style="color:var(--plum)">${s.n}</span>
+      <span class="serif" style="font-size:23px">${NC.esc(s.t)}</span>
+      <span class="muted" style="font-size:13.5px;line-height:1.6">${NC.esc(s.d)}</span>
+    </div>`).join('');
+
+  document.getElementById('tariff-grid').innerHTML = data.tariffs.map(t => `
+    <a class="card col" href="/order.html?tariff=${t.id}" style="gap:16px;border:1px solid var(--line);padding:30px">
+      <span class="mono">${t.code}</span>
+      <span class="serif" style="font-size:32px">${NC.esc(t.name)}</span>
+      <div class="row" style="align-items:baseline;gap:8px">
+        <span class="serif" style="font-size:44px">${t.perDay}</span>
+        <span class="muted" style="font-size:13px">${NC.cur} в день</span>
+      </div>
+      <div class="col muted" style="gap:7px;font-size:13.5px">
+        <span>${t.meals} приёма пищи в день</span><span>${t.days} дней рациона</span><span>Запрос замены и пауза</span>
+      </div>
+      <div class="row" style="justify-content:space-between;align-items:baseline;padding-top:16px;border-top:1px solid var(--gold);margin-top:auto">
+        <span class="mono">Итого</span><span class="serif" style="font-size:26px">${NC.money(t.perDay * t.days)}</span>
+      </div>
+    </a>`).join('');
+  document.querySelectorAll('#tariff-grid a').forEach(a => a.style.borderBottom = '1px solid var(--line)');
+
+  const RU = { breakfast: 'Завтрак', lunch: 'Обед', dinner: 'Ужин', snack: 'Перекус' };
+  const all = (await NC.api('/api/dishes')).dishes.map(d => Object.assign({}, d, { catLabel: RU[d.cat] }));
+  bindSheet(document.getElementById('menu-grid'), all);
+})();
+</script>
+</body>
+</html>

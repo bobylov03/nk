@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NC meals — оформление рациона</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=Jost:wght@300;400;500&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/nc.css">
+</head>
+<body>
+<div class="phone">
+  <header>
+    <div class="row" style="justify-content:space-between">
+      <button class="btn ghost sm" id="back" style="width:38px;height:38px;padding:0;border-radius:50%">‹</button>
+      <span class="mono" id="counter"></span>
+      <span style="width:38px"></span>
+    </div>
+    <h1 class="serif" id="step-title" style="font-size:27px"></h1>
+    <div class="dots" id="dots"><i></i><i></i><i></i><i></i></div>
+  </header>
+
+  <main id="body"></main>
+
+  <div class="sticky">
+    <div class="col" style="gap:2px">
+      <span class="mono" id="total-label">Стоимость</span>
+      <span class="serif" id="total" style="font-size:24px;line-height:1"></span>
+    </div>
+    <button class="btn" id="cta" style="flex:1"></button>
+  </div>
+</div>
+
+<script src="/js/nc.js"></script>
+<script>
+const state = {
+  step: 1, data: null, orderId: null, order: null,
+  form: { tariffId: 't14', meals: 4, exclude: [], name: '', phone: '', address: '', flat: '', slot: 's1', note: '', promo: '', pay: 'card' }
+};
+const TITLES = ['Выберите рацион', 'Адрес и контакты', 'Заявка отправлена', 'Оплата рациона', 'Готово'];
+const CTA = ['Далее', 'Отправить заявку', 'Проверить статус', 'Оплатить рацион', 'В личный кабинет'];
+const $ = (id) => document.getElementById(id);
+const tariff = () => state.data.tariffs.find(t => t.id === state.form.tariffId) || state.data.tariffs[0];
+const sum = () => state.order ? state.order.sum : tariff().perDay * tariff().days;
+
+async function boot() {
+  state.data = await NC.api('/api/public');
+  NC.cur = state.data.content.currency || '₾';
+  const q = new URLSearchParams(location.search);
+  if (q.get('tariff')) state.form.tariffId = q.get('tariff');
+  if (q.get('order')) { state.orderId = q.get('order'); await refresh(); state.step = 3; }
+  render();
+}
+
+async function refresh() {
+  if (!state.orderId) return;
+  const r = await NC.api('/api/orders/' + state.orderId);
+  state.order = r.order;
+  if (state.order.status === 'approved' && state.step === 3) state.step = 4;
+  if (state.order.status === 'paid') state.step = 5;
+}
+
+function render() {
+  $('counter').textContent = state.step > 4 ? 'готово' : 'шаг ' + state.step + ' из 4';
+  $('step-title').textContent = TITLES[state.step - 1];
+  $('dots').innerHTML = [1, 2, 3, 4].map(n => `<i class="${n <= state.step ? 'on' : ''}"></i>`).join('');
+  $('total-label').textContent = state.step === 4 ? 'К оплате' : 'Стоимость';
+  $('total').textContent = NC.money(sum());
+  $('cta').textContent = CTA[state.step - 1];
+  $('back').style.visibility = state.step === 1 || state.step > 2 ? 'hidden' : 'visible';
+  $('body').innerHTML = [step1, step2, step3, step4, step5][state.step - 1]();
+  wire();
+}
+
+/* 1 — анкета: рацион */
+function step1() {
+  const f = state.form;
+  return `<div class="col fade" style="gap:14px">
+    ${state.data.tariffs.map(t => `
+      <div class="card row" data-tariff="${t.id}" style="cursor:pointer;gap:14px;${t.id === f.tariffId ? 'border-color:var(--plum)' : ''}">
+        <span style="width:20px;height:20px;border-radius:50%;border:1px solid ${t.id === f.tariffId ? 'var(--plum)' : 'rgba(74,36,61,.3)'};background:${t.id === f.tariffId ? 'var(--plum)' : 'transparent'}"></span>
+        <span class="col" style="flex:1;gap:3px"><span class="serif" style="font-size:20px">${t.name}</span><span class="muted" style="font-size:12px">${t.days} дней · ${t.perDay} ${NC.cur}/день</span></span>
+        <span class="serif" style="font-size:22px;white-space:nowrap">${NC.money(t.perDay * t.days)}</span>
+      </div>`).join('')}
+    <div class="card col" style="gap:10px">
+      <span class="mono">Приёмов пищи в день</span>
+      <div class="row" style="gap:8px">${[3, 4, 5].map(n => `<button class="chip ${f.meals === n ? 'on' : ''}" data-meals="${n}" style="flex:1;padding:11px 0">${n}</button>`).join('')}</div>
+      <span class="muted" style="font-size:12px;line-height:1.5">${f.meals === 3 ? 'Завтрак, обед, ужин' : f.meals === 4 ? 'Завтрак, обед, ужин и перекус' : 'Полный день с двумя перекусами'}</span>
+    </div>
+    <div class="card col" style="gap:10px">
+      <span class="mono">Исключить продукты</span>
+      <div class="row" style="flex-wrap:wrap;gap:7px">${state.data.excludeOptions.map(o => `<button class="chip ${f.exclude.includes(o) ? 'on' : ''}" data-ex="${o}">${o}</button>`).join('')}</div>
+    </div>
+  </div>`;
+}
+
+/* 2 — анкета: адрес и контакты */
+function step2() {
+  const f = state.form;
+  return `<div class="col fade" style="gap:14px">
+    <div class="card col" style="gap:12px">
+      <label><span class="mono">Имя и фамилия</span><input data-f="name" value="${NC.esc(f.name)}" placeholder="Нино Церетели"></label>
+      <label><span class="mono">Телефон</span><input data-f="phone" value="${NC.esc(f.phone)}" placeholder="+995 555 12 34 56"></label>
+      <label><span class="mono">Адрес</span><input data-f="address" value="${NC.esc(f.address)}" placeholder="Ваке, ул. Абашидзе 24"></label>
+      <label><span class="mono">Квартира, домофон</span><input data-f="flat" value="${NC.esc(f.flat)}" placeholder="кв. 12, код 12К"></label>
+    </div>
+    <div class="card col" style="gap:10px">
+      <span class="mono">Окно доставки</span>
+      <div class="row" style="gap:8px">${state.data.slots.map(s => `<button class="chip ${f.slot === s.id ? 'on' : ''}" data-slot="${s.id}" style="flex:1;padding:12px 0;font-family:var(--mono);font-size:11px">${s.label}</button>`).join('')}</div>
+      <label style="margin-top:4px"><span class="mono">Комментарий курьеру</span><input data-f="note" value="${NC.esc(f.note)}" placeholder="Оставить у двери…"></label>
+    </div>
+    <span class="muted" style="font-size:12.5px;line-height:1.6">Это анкета — оплата не потребуется. Мы свяжемся, подтвердим рацион и зону доставки, и только после этого откроем оплату.</span>
+  </div>`;
+}
+
+/* 3 — заявка на согласовании */
+function step3() {
+  const o = state.order || {};
+  const st = { pending: 'На согласовании', approved: 'Подтверждена', rejected: 'Отклонена', paid: 'Оплачена' }[o.status] || '—';
+  return `<div class="col fade" style="gap:16px">
+    <div class="card col" style="gap:14px">
+      <div class="row" style="gap:12px">
+        <span style="width:34px;height:34px;border-radius:50%;border:1px solid var(--gold);display:grid;place-items:center">◷</span>
+        <span class="serif" style="font-size:21px">Заявка ${st.toLowerCase()}</span>
+      </div>
+      <span class="muted" style="font-size:13.5px;line-height:1.6">Проверим состав рациона, зону и окно доставки и подтвердим заявку в течение дня. Оплата — только после подтверждения.</span>
+      <div class="hr"></div>
+      ${summary(o)}
+    </div>
+    <span class="muted" style="font-size:12.5px">Номер заявки ${NC.esc(o.id || '')}. Ссылку можно сохранить: <a href="/order.html?order=${NC.esc(o.id || '')}">статус заявки</a></span>
+  </div>`;
+}
+
+/* 4 — оплата */
+function step4() {
+  const f = state.form, o = state.order || {};
+  return `<div class="col fade" style="gap:14px">
+    <div class="card col" style="gap:12px">${summary(o)}</div>
+    <div class="row" style="gap:8px">
+      <input data-f="promo" value="${NC.esc(f.promo)}" placeholder="Промокод" style="text-transform:uppercase;font-family:var(--mono);font-size:12px">
+      <button class="btn ghost" id="promo-btn">Применить</button>
+    </div>
+    <div class="card col" style="gap:8px">
+      <span class="mono">Способ оплаты</span>
+      ${[['card', 'Карта онлайн'], ['apple', 'Apple Pay'], ['cash', 'Наличные курьеру']].map(([id, label]) => `
+        <div class="row" data-pay="${id}" style="gap:12px;padding:13px 16px;border-radius:12px;cursor:pointer;border:1px solid ${f.pay === id ? 'var(--plum)' : 'var(--line)'}">
+          <span style="width:18px;height:18px;border-radius:50%;border:1px solid ${f.pay === id ? 'var(--plum)' : 'rgba(74,36,61,.3)'};background:${f.pay === id ? 'var(--plum)' : 'transparent'}"></span>
+          <span style="font-size:14px">${label}</span>
+        </div>`).join('')}
+    </div>
+  </div>`;
+}
+
+/* 5 — готово */
+function step5() {
+  const o = state.order || {};
+  return `<div class="col fade" style="gap:18px;align-items:center;text-align:center;padding:30px 0">
+    <div style="width:96px;height:96px;border-radius:50%;background:var(--silk);display:grid;place-items:center;font-size:34px">✓</div>
+    <span class="serif" style="font-size:28px">Рацион подтверждён и оплачен</span>
+    <span class="muted" style="font-size:14px;line-height:1.6;max-width:26em">Первая доставка — завтра в вашем окне. Меню, КБЖУ и остаток дней уже в личном кабинете.</span>
+    <div class="card col" style="gap:10px;width:100%;text-align:left">${summary(o)}</div>
+  </div>`;
+}
+
+function summary(o) {
+  const f = state.form;
+  const t = state.data.tariffs.find(x => x.id === (o.tariffId || f.tariffId)) || tariff();
+  const slot = (state.data.slots.find(s => s.id === (o.slot || f.slot)) || {}).label || '';
+  const rows = [
+    ['Рацион', t.name + ' · ' + (o.planDays || t.days) + ' дней'],
+    ['Приёмов в день', String(o.meals || f.meals)],
+    ['Исключения', ((o.exclude || f.exclude).join(', ') || 'нет')],
+    ['Имя', o.name || f.name],
+    ['Телефон', o.phone || f.phone],
+    ['Адрес', [(o.address || f.address), (o.flat || f.flat)].filter(Boolean).join(', ')],
+    ['Окно доставки', slot],
+    ['Итого', NC.money(o.sum || sum())]
+  ];
+  return rows.map(([k, v]) => `<div class="row" style="justify-content:space-between;gap:14px;font-size:13px"><span class="muted">${k}</span><span style="text-align:right">${NC.esc(v)}</span></div>`).join('');
+}
+
+function wire() {
+  const f = state.form;
+  document.querySelectorAll('[data-tariff]').forEach(el => el.onclick = () => { f.tariffId = el.dataset.tariff; render(); });
+  document.querySelectorAll('[data-meals]').forEach(el => el.onclick = () => { f.meals = +el.dataset.meals; render(); });
+  document.querySelectorAll('[data-slot]').forEach(el => el.onclick = () => { f.slot = el.dataset.slot; render(); });
+  document.querySelectorAll('[data-pay]').forEach(el => el.onclick = () => { f.pay = el.dataset.pay; render(); });
+  document.querySelectorAll('[data-ex]').forEach(el => el.onclick = () => {
+    const v = el.dataset.ex;
+    f.exclude = f.exclude.includes(v) ? f.exclude.filter(x => x !== v) : f.exclude.concat([v]);
+    render();
+  });
+  document.querySelectorAll('[data-f]').forEach(el => el.oninput = () => { f[el.dataset.f] = el.value; });
+  const pb = $('promo-btn');
+  if (pb) pb.onclick = () => NC.toast(f.promo ? 'Промокод применим при оплате' : 'Введите промокод');
+}
+
+$('back').onclick = () => { if (state.step > 1) { state.step--; render(); } };
+
+$('cta').onclick = async () => {
+  const f = state.form;
+  try {
+    if (state.step === 1) { state.step = 2; return render(); }
+    if (state.step === 2) {
+      if (!f.name || !f.phone || !f.address) return NC.toast('Заполните имя, телефон и адрес');
+      const r = await NC.api('/api/orders', { method: 'POST', body: f });
+      state.order = r.order; state.orderId = r.order.id;
+      history.replaceState(null, '', '/order.html?order=' + r.order.id);
+      state.step = 3; return render();
+    }
+    if (state.step === 3) {
+      await refresh();
+      if (state.order.status === 'pending') NC.toast('Заявка ещё на согласовании');
+      if (state.order.status === 'rejected') NC.toast('Заявка отклонена — свяжитесь с нами');
+      return render();
+    }
+    if (state.step === 4) {
+      const r = await NC.api('/api/orders/' + state.orderId + '/pay', { method: 'POST', body: { pay: f.pay } });
+      state.order = r.order;
+      NC.setClient(r.clientId);
+      state.step = 5; return render();
+    }
+    location.href = '/cabinet.html';
+  } catch (e) { NC.toast(e.message); }
+};
+
+boot();
+setInterval(() => { if (state.step === 3) refresh().then(render).catch(() => {}); }, 8000);
+</script>
+</body>
+</html>
