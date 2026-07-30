@@ -101,15 +101,15 @@ function planCard() {
     <div class="row" style="justify-content:space-between">
       <span class="mono">Рацион · осталось</span><span style="font-size:11px;letter-spacing:.1em">NC · ${c.planDays} дней</span>
     </div>
-    <div class="row" style="gap:18px">
-      <div style="width:84px;height:84px;border-radius:50%;background:conic-gradient(var(--plum) ${pct}%, rgba(74,36,61,.12) 0);display:grid;place-items:center;flex:0 0 auto">
-        <div style="width:64px;height:64px;border-radius:50%;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center">
-          <span class="serif" style="font-size:26px;line-height:1">${c.daysLeft}</span><span class="mono" style="font-size:8px">ДНЕЙ</span>
+    <div class="row plan-body" style="gap:18px">
+      <div class="ring" style="background:conic-gradient(var(--plum) ${pct}%, rgba(74,36,61,.12) 0)">
+        <div class="ring-in">
+          <span class="serif">${c.daysLeft}</span><span class="mono">ДНЕЙ</span>
         </div>
       </div>
-      <div class="col" style="gap:8px;flex:1">
-        <div class="row" style="justify-content:space-between;font-size:13px"><span>Следующая доставка</span><span>${c.paused ? 'перенесена' : 'завтра, ' + slotLabel(c.slot)}</span></div>
-        <div class="row" style="justify-content:space-between;font-size:13px"><span>Статус</span><span>${c.paused ? 'на паузе' : 'активен'}</span></div>
+      <div class="col" style="gap:8px;flex:1;min-width:0">
+        <div class="pc-row"><span>Следующая доставка</span><span class="pc-val">${c.paused ? 'перенесена' : 'завтра, ' + slotLabel(c.slot)}</span></div>
+        <div class="pc-row"><span>Статус</span><span class="pc-val">${c.paused ? 'на паузе' : 'активен'}</span></div>
         <div class="row" style="gap:8px">
           <button class="btn ghost sm" id="pause" style="flex:1">${c.paused ? 'Возобновить' : 'Пауза'}</button>
           <button class="btn sm" data-tab-jump="stats" style="flex:1">Продлить</button>
