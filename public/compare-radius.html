@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NC meals — сравнение скруглений</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=Jost:wght@300;400;500&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/nc.css">
+<style>
+  .wrap{padding:48px 40px;display:flex;flex-direction:column;gap:34px}
+  .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:28px}
+  .opt{display:flex;flex-direction:column;gap:14px;align-items:center;text-align:center}
+  .shot{width:100%;max-width:300px;aspect-ratio:1;background:var(--silk) center/cover no-repeat;box-shadow:0 24px 60px rgba(74,36,61,.22)}
+  .live{background:linear-gradient(160deg,#fbf6ef,#f2e5d6);padding:44px 40px;border-radius:var(--r);display:grid;grid-template-columns:1fr auto;gap:40px;align-items:center}
+  .live .hero-photo{margin:0}
+  input[type=range]{width:100%;max-width:420px;padding:0}
+  @media (max-width:760px){.wrap{padding:32px 20px}.live{grid-template-columns:1fr;padding:28px 20px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="col" style="gap:10px">
+    <span class="mono">Служебная страница · не в навигации сайта</span>
+    <h1 style="font-size:clamp(28px,4.4vw,40px)">Скругление фото на главном экране</h1>
+    <span class="muted" style="font-size:14px;line-height:1.6;max-width:44em">
+      Сейчас на сайте стоит 32&nbsp;px. Ниже — тот же кадр в четырёх вариантах и живой предпросмотр
+      целого блока. Выберите значение и скажите какое — я поставлю его в стили.
+    </span>
+  </div>
+
+  <div class="opts" id="opts"></div>
+
+  <div class="hr"></div>
+
+  <div class="col" style="gap:16px">
+    <span class="mono">Живой предпросмотр — двигайте ползунок</span>
+    <input type="range" id="range" min="0" max="48" value="32">
+    <span class="serif" style="font-size:22px">Радиус: <b id="val">32</b> px</span>
+    <div class="live">
+      <div class="col" style="gap:18px">
+        <span class="mono">MEALS MADE AROUND YOU</span>
+        <h2 style="font-size:clamp(26px,3.4vw,44px);max-width:15em;text-wrap:pretty">Свежий рацион на каждый день, приготовленный под вас</h2>
+        <span class="muted" style="font-size:15px;line-height:1.6;max-width:30em">Четыре приёма пищи, новое меню каждые 10 дней, доставка по Тбилиси до 9:00.</span>
+        <a class="btn" href="#" style="align-self:flex-start;border:0" onclick="return false">Оформить рацион</a>
+      </div>
+      <div class="hero-photo" id="live-photo" style="justify-self:center"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const IMG = '/img/food-toast.jpg';
+const VARIANTS = [
+  [0,  'Строгий квадрат', 'Максимально галерейно, кадр читается как фотография'],
+  [12, 'Мягкий угол',     'Скругление почти незаметно, но снимает жёсткость'],
+  [20, 'Средний',         'Компромисс: аккуратно и не «приложение»'],
+  [32, 'Текущий',         'Сейчас на сайте — выраженно скруглённый']
+];
+
+document.getElementById('opts').innerHTML = VARIANTS.map(([r, name, note]) => `
+  <div class="opt">
+    <div class="shot" style="border-radius:${r}px;background-image:url('${IMG}')"></div>
+    <div class="col" style="gap:5px">
+      <span class="serif" style="font-size:21px">${name} · ${r} px</span>
+      <span class="muted" style="font-size:12.5px;line-height:1.5;max-width:22em">${note}</span>
+    </div>
+  </div>`).join('');
+
+const live = document.getElementById('live-photo');
+live.innerHTML = `<i class="on" style="background-image:url('${IMG}')"></i>`;
+const range = document.getElementById('range'), val = document.getElementById('val');
+range.oninput = () => { live.style.borderRadius = range.value + 'px'; val.textContent = range.value; };
+range.oninput();
+</script>
+</body>
+</html>

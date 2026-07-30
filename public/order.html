@@ -17,7 +17,8 @@
       <span style="width:38px"></span>
     </div>
     <h1 class="serif" id="step-title" style="font-size:27px"></h1>
-    <div class="dots" id="dots"><i></i><i></i><i></i><i></i></div>
+    <span id="step-note" style="font-size:12.5px;line-height:1.5;color:var(--muted)"></span>
+    <div class="dots" id="dots"></div>
   </header>
 
   <main id="body"></main>
@@ -33,95 +34,279 @@
 
 <script src="/js/nc.js"></script>
 <script>
+const QSTEPS = 6;                          // разделов анкеты
 const state = {
-  step: 1, data: null, orderId: null, order: null,
-  form: { tariffId: 't14', meals: 4, exclude: [], name: '', phone: '', address: '', flat: '', slot: 's1', note: '', promo: '', pay: 'card' }
+  step: 1, welcome: false, data: null, opts: null, orderId: null, order: null,
+  form: {
+    tariffId: 't14', name: '', phone: '', flat: '', promo: '', pay: 'card', clientId: null, known: '',
+    profile: {
+      goals: [], medical: [], medicalNote: '', dislikes: [], dislikesNote: '',
+      likes: [], likesNote: '', never: '', meals: 4, soups: 'Иногда', cuisine: 'Смешанная',
+      favDishes: '', kbju: { on: false, kcal: '', p: '', f: '', c: '', note: '' },
+      priorities: [], delivery: { address: '', entrance: '', floor: '', intercom: '', note: '', slot: 's1' },
+      extra: '', weight: '', portion: 'обычная'
+    }
+  }
 };
-const TITLES = ['Выберите рацион', 'Адрес и контакты', 'Заявка отправлена', 'Оплата рациона', 'Готово'];
-const CTA = ['Далее', 'Отправить заявку', 'Проверить статус', 'Оплатить рацион', 'В личный кабинет'];
+
+const TITLES = ['Выберите рацион', 'Основная цель', 'Медицинские особенности', 'Вкусы и предпочтения',
+  'КБЖУ и приоритеты', 'Доставка и контакты', 'Заявка отправлена', 'Оплата рациона', 'Готово'];
+const NOTES = ['Чем длиннее рацион, тем ниже цена дня.',
+  'Расскажите, какой результат вы хотите получить. Можно выбрать несколько вариантов.',
+  'Очень важный раздел — от него зависит, что попадёт к вам в контейнер.',
+  'Чем подробнее ответите, тем меньше придётся править потом.',
+  'Считать ничего не нужно — заполняйте, только если у вас есть конкретные цифры.',
+  'Это анкета, оплата не потребуется. Мы свяжемся и подтвердим рацион.',
+  '', '', ''];
+const CTA = ['Далее', 'Далее', 'Далее', 'Далее', 'Далее', 'Отправить заявку',
+  'Проверить статус', 'Оплатить рацион', 'В личный кабинет'];
+
 const $ = (id) => document.getElementById(id);
+const P = () => state.form.profile;
 const tariff = () => state.data.tariffs.find(t => t.id === state.form.tariffId) || state.data.tariffs[0];
 const sum = () => state.order ? state.order.sum : tariff().perDay * tariff().days;
 
 async function boot() {
   state.data = await NC.api('/api/public');
+  state.opts = state.data.options;
   NC.cur = state.data.content.currency || '₾';
+  P().delivery.slot = state.data.slots[0].id;
+
   const q = new URLSearchParams(location.search);
   if (q.get('tariff')) state.form.tariffId = q.get('tariff');
-  if (q.get('order')) { state.orderId = q.get('order'); await refresh(); state.step = 3; }
+  if (q.get('order')) { state.orderId = q.get('order'); await refresh(); state.step = 7; render(); return; }
+
+  // повторный заказ: если человек уже заходил в кабинет — подтягиваем профиль
+  const id = NC.clientId();
+  if (id && NC.token()) {
+    try {
+      const d = await NC.api('/api/client/' + id);
+      applyKnown(d.client, d.profile);
+      state.welcome = true;
+    } catch (e) { /* токен протух — покажем обычную анкету */ }
+  }
   render();
+}
+
+function applyKnown(client, profile) {
+  const f = state.form;
+  f.clientId = client.id;
+  f.name = client.name;
+  f.phone = client.phone;
+  f.known = client.kitchen || '';
+  const p = P();
+  Object.assign(p, profile);
+  p.kbju = Object.assign({ on: false, kcal: '', p: '', f: '', c: '', note: '' }, profile.kbju || {});
+  p.delivery = Object.assign({ address: '', entrance: '', floor: '', intercom: '', note: '', slot: 's1' }, profile.delivery || {});
 }
 
 async function refresh() {
   if (!state.orderId) return;
   const r = await NC.api('/api/orders/' + state.orderId);
   state.order = r.order;
-  if (state.order.status === 'approved' && state.step === 3) state.step = 4;
-  if (state.order.status === 'paid') state.step = 5;
+  if (state.order.status === 'approved' && state.step === 7) state.step = 8;
+  if (state.order.status === 'paid') state.step = 9;
 }
 
 function render() {
-  $('counter').textContent = state.step > 4 ? 'готово' : 'шаг ' + state.step + ' из 4';
+  if (state.welcome) return renderWelcome();
+  $('counter').textContent = state.step > QSTEPS ? 'заявка' : 'шаг ' + state.step + ' из ' + QSTEPS;
   $('step-title').textContent = TITLES[state.step - 1];
-  $('dots').innerHTML = [1, 2, 3, 4].map(n => `<i class="${n <= state.step ? 'on' : ''}"></i>`).join('');
-  $('total-label').textContent = state.step === 4 ? 'К оплате' : 'Стоимость';
+  $('step-note').textContent = NOTES[state.step - 1] || '';
+  $('dots').innerHTML = Array.from({ length: QSTEPS }, (_, i) =>
+    '<i class="' + (i + 1 <= state.step ? 'on' : '') + '"></i>').join('');
+  $('total-label').textContent = state.step === 8 ? 'К оплате' : 'Стоимость';
   $('total').textContent = NC.money(sum());
   $('cta').textContent = CTA[state.step - 1];
-  $('back').style.visibility = state.step === 1 || state.step > 2 ? 'hidden' : 'visible';
-  $('body').innerHTML = [step1, step2, step3, step4, step5][state.step - 1]();
+  $('back').style.visibility = (state.step === 1 || state.step > QSTEPS) ? 'hidden' : 'visible';
+  $('body').innerHTML = [step1, step2, step3, step4, step5, step6, step7, step8, step9][state.step - 1]();
   wire();
 }
 
-/* 1 — анкета: рацион */
+/* ---------- экран повторного клиента ---------- */
+function renderWelcome() {
+  const p = P();
+  $('counter').textContent = 'с возвращением';
+  $('step-title').textContent = state.form.known || 'Мы помним ваши предпочтения';
+  $('step-note').textContent = 'Хотите что-нибудь изменить?';
+  $('dots').innerHTML = '';
+  $('total-label').textContent = 'Стоимость';
+  $('total').textContent = NC.money(sum());
+  $('cta').textContent = 'Всё верно, к тарифу';
+  $('back').style.visibility = 'hidden';
+  const rows = [
+    ['Цель', p.goals.join(', ')],
+    ['Медицинские особенности', p.medical.join(', ')],
+    ['Не едите', p.dislikes.join(', ')],
+    ['Любите', p.likes.join(', ')],
+    ['Никогда не использовать', p.never],
+    ['Приёмов пищи', p.meals],
+    ['Кухня', p.cuisine],
+    ['Адрес', p.delivery.address]
+  ].filter(r => r[1]);
+  $('body').innerHTML = '<div class="col fade" style="gap:16px">' +
+    '<div class="card col" style="gap:12px"><span class="mono">Ваш профиль</span>' +
+    '<div class="kv">' + rows.map(([k, v]) =>
+      '<div><span class="muted">' + k + '</span><b>' + NC.esc(String(v)) + '</b></div>').join('') + '</div></div>' +
+    '<button class="btn ghost wide" id="edit-profile">Редактировать профиль</button>' +
+    '<span class="muted" style="font-size:12.5px;line-height:1.55">Если ничего не изменилось — просто выберите рацион, анкету заново заполнять не нужно.</span>' +
+    '</div>';
+  $('edit-profile').onclick = () => { state.welcome = false; state.step = 2; render(); };
+}
+
+/* ---------- 1. рацион ---------- */
 function step1() {
-  const f = state.form;
+  const f = state.form, o = state.opts;
   return `<div class="col fade" style="gap:14px">
     ${state.data.tariffs.map(t => `
-      <div class="card row" data-tariff="${t.id}" style="cursor:pointer;gap:14px;${t.id === f.tariffId ? 'border-color:var(--plum)' : ''}">
-        <span style="width:20px;height:20px;border-radius:50%;border:1px solid ${t.id === f.tariffId ? 'var(--plum)' : 'rgba(74,36,61,.3)'};background:${t.id === f.tariffId ? 'var(--plum)' : 'transparent'}"></span>
-        <span class="col" style="flex:1;gap:3px"><span class="serif" style="font-size:20px">${t.name}</span><span class="muted" style="font-size:12px">${t.days} дней · ${t.perDay} ${NC.cur}/день</span></span>
+      <div class="card row ${t.id === f.tariffId ? 'sel' : ''}" data-tariff="${t.id}" style="cursor:pointer;gap:14px">
+        <span style="width:20px;height:20px;border-radius:50%;border:1px solid ${t.id === f.tariffId ? 'var(--gold-solid)' : 'rgba(74,36,61,.3)'};background:${t.id === f.tariffId ? 'var(--gold-solid)' : 'transparent'}"></span>
+        <span class="col" style="flex:1;gap:3px"><span class="serif" style="font-size:20px">${NC.esc(t.name)}</span><span class="muted" style="font-size:12px">${t.days} дней · ${t.perDay} ${NC.cur}/день</span></span>
         <span class="serif" style="font-size:22px;white-space:nowrap">${NC.money(t.perDay * t.days)}</span>
       </div>`).join('')}
-    <div class="card col" style="gap:10px">
-      <span class="mono">Приёмов пищи в день</span>
-      <div class="row" style="gap:8px">${[3, 4, 5].map(n => `<button class="chip ${f.meals === n ? 'on' : ''}" data-meals="${n}" style="flex:1;padding:11px 0">${n}</button>`).join('')}</div>
-      <span class="muted" style="font-size:12px;line-height:1.5">${f.meals === 3 ? 'Завтрак, обед, ужин' : f.meals === 4 ? 'Завтрак, обед, ужин и перекус' : 'Полный день с двумя перекусами'}</span>
+    <div class="card q">
+      <span class="q-title">Сколько приёмов пищи хотите получать?</span>
+      ${NC.radios('meals', o.meals, P().meals)}
+      <span class="q-note">${P().meals === 3 ? 'Завтрак, обед, ужин' : P().meals === 4 ? 'Завтрак, обед, ужин и перекус' : 'Полный день с двумя перекусами'}</span>
     </div>
-    <div class="card col" style="gap:10px">
-      <span class="mono">Исключить продукты</span>
-      <div class="row" style="flex-wrap:wrap;gap:7px">${state.data.excludeOptions.map(o => `<button class="chip ${f.exclude.includes(o) ? 'on' : ''}" data-ex="${o}">${o}</button>`).join('')}</div>
-    </div>
+    <button class="btn ghost sm" id="known" style="align-self:flex-start">Я уже заказывал(а) — подставить профиль</button>
   </div>`;
 }
 
-/* 2 — анкета: адрес и контакты */
+/* ---------- 2. цель ---------- */
 function step2() {
-  const f = state.form;
   return `<div class="col fade" style="gap:14px">
-    <div class="card col" style="gap:12px">
-      <label><span class="mono">Имя и фамилия</span><input data-f="name" value="${NC.esc(f.name)}" placeholder="Нино Церетели"></label>
-      <label><span class="mono">Телефон</span><input data-f="phone" value="${NC.esc(f.phone)}" placeholder="+995 555 12 34 56"></label>
-      <label><span class="mono">Адрес</span><input data-f="address" value="${NC.esc(f.address)}" placeholder="Ваке, ул. Абашидзе 24"></label>
-      <label><span class="mono">Квартира, домофон</span><input data-f="flat" value="${NC.esc(f.flat)}" placeholder="кв. 12, код 12К"></label>
+    <div class="card q">
+      <span class="q-title">Какой результат вы хотите получить?</span>
+      ${NC.chips('goals', state.opts.goals, P().goals)}
     </div>
-    <div class="card col" style="gap:10px">
-      <span class="mono">Окно доставки</span>
-      <div class="row" style="gap:8px">${state.data.slots.map(s => `<button class="chip ${f.slot === s.id ? 'on' : ''}" data-slot="${s.id}" style="flex:1;padding:12px 0;font-family:var(--mono);font-size:11px">${s.label}</button>`).join('')}</div>
-      <label style="margin-top:4px"><span class="mono">Комментарий курьеру</span><input data-f="note" value="${NC.esc(f.note)}" placeholder="Оставить у двери…"></label>
+    <div class="card q">
+      <span class="q-title">Вес, кг</span>
+      <span class="q-note">Необязательно. Помогает точнее рассчитать порции.</span>
+      <input data-p="weight" value="${NC.esc(P().weight)}" placeholder="58" inputmode="decimal">
     </div>
-    <span class="muted" style="font-size:12.5px;line-height:1.6">Это анкета — оплата не потребуется. Мы свяжемся, подтвердим рацион и зону доставки, и только после этого откроем оплату.</span>
+    <div class="card q">
+      <span class="q-title">Размер порций</span>
+      ${NC.radios('portion', state.opts.portions, P().portion)}
+    </div>
   </div>`;
 }
 
-/* 3 — заявка на согласовании */
+/* ---------- 3. здоровье ---------- */
 function step3() {
+  return `<div class="col fade" style="gap:14px">
+    <div class="card q">
+      <span class="q-title">Есть ли у вас:</span>
+      ${NC.chips('medical', state.opts.medical, P().medical)}
+      <label><span class="mono">Расскажите подробнее</span>
+        <textarea data-p="medicalNote" placeholder="Например: аллергия на цитрусовые">${NC.esc(P().medicalNote)}</textarea></label>
+    </div>
+    <div class="card q">
+      <span class="q-title">Продукты, которые категорически нельзя использовать</span>
+      <span class="q-note">Это правило без исключений — такие продукты не попадут в рацион ни при каких заменах.</span>
+      <textarea data-p="never" placeholder="Например: свинина в любом виде">${NC.esc(P().never)}</textarea>
+    </div>
+  </div>`;
+}
+
+/* ---------- 4. вкусы ---------- */
+function step4() {
+  const o = state.opts;
+  return `<div class="col fade" style="gap:14px">
+    <div class="card q">
+      <span class="q-title">Какие продукты вы НЕ едите?</span>
+      ${NC.chips('dislikes', o.products, P().dislikes)}
+      <input data-p="dislikesNote" value="${NC.esc(P().dislikesNote)}" placeholder="Что-то ещё, чего нет в списке">
+    </div>
+    <div class="card q">
+      <span class="q-title">Что вы очень любите?</span>
+      ${NC.chips('likes', o.products, P().likes)}
+      <input data-p="likesNote" value="${NC.esc(P().likesNote)}" placeholder="Что-то ещё, чего нет в списке">
+    </div>
+    <div class="card q">
+      <span class="q-title">Любите ли супы?</span>
+      ${NC.radios('soups', o.soups, P().soups)}
+    </div>
+    <div class="card q">
+      <span class="q-title">Предпочитаете кухню</span>
+      ${NC.radios('cuisine', o.cuisines, P().cuisine)}
+    </div>
+    <div class="card q">
+      <span class="q-title">Есть ли любимые блюда?</span>
+      <textarea data-p="favDishes" placeholder="Например: лосось на гриле, овощные боулы">${NC.esc(P().favDishes)}</textarea>
+    </div>
+  </div>`;
+}
+
+/* ---------- 5. КБЖУ и приоритеты ---------- */
+function step5() {
+  const k = P().kbju;
+  return `<div class="col fade" style="gap:14px">
+    <div class="card q">
+      <span class="q-title">Хотите придерживаться конкретного КБЖУ?</span>
+      <span class="q-note">Считать ничего не нужно. Если цифр нет — выберите «Нет», мы подберём норму сами.</span>
+      <div class="chips" data-kbju>
+        <button type="button" class="chip ${k.on ? '' : 'on'}" data-on="0">Нет</button>
+        <button type="button" class="chip ${k.on ? 'on' : ''}" data-on="1">Да</button>
+      </div>
+      ${k.on ? `
+        <div class="grid" style="grid-template-columns:repeat(2,1fr);gap:10px">
+          <label><span class="mono">Калории</span><input data-k="kcal" value="${NC.esc(k.kcal)}" inputmode="numeric" placeholder="1900"></label>
+          <label><span class="mono">Белки, г</span><input data-k="p" value="${NC.esc(k.p)}" inputmode="numeric" placeholder="130"></label>
+          <label><span class="mono">Жиры, г</span><input data-k="f" value="${NC.esc(k.f)}" inputmode="numeric" placeholder="70"></label>
+          <label><span class="mono">Углеводы, г</span><input data-k="c" value="${NC.esc(k.c)}" inputmode="numeric" placeholder="210"></label>
+        </div>
+        <label><span class="mono">Или рекомендации тренера / нутрициолога</span>
+          <textarea data-k="note" placeholder="Вставьте текст рекомендаций">${NC.esc(k.note)}</textarea></label>` : ''}
+    </div>
+    <div class="card q">
+      <span class="q-title">Что для вас самое важное?</span>
+      <span class="q-note">Выберите до трёх пунктов.</span>
+      ${NC.chips('priorities', state.opts.priorities, P().priorities, state.data.priorityLimit || 3)}
+    </div>
+  </div>`;
+}
+
+/* ---------- 6. доставка и контакты ---------- */
+function step6() {
+  const f = state.form, d = P().delivery;
+  return `<div class="col fade" style="gap:14px">
+    <div class="card q">
+      <span class="q-title">Контакты</span>
+      <label><span class="mono">Имя и фамилия</span><input data-f="name" value="${NC.esc(f.name)}" placeholder="Нино Церетели"></label>
+      <label><span class="mono">Телефон</span><input data-f="phone" value="${NC.esc(f.phone)}" placeholder="+995 555 12 34 56" inputmode="tel"></label>
+    </div>
+    <div class="card q">
+      <span class="q-title">Доставка</span>
+      <label><span class="mono">Адрес</span><input data-d="address" value="${NC.esc(d.address)}" placeholder="Ваке, ул. Абашидзе 24"></label>
+      <div class="grid" style="grid-template-columns:repeat(3,1fr);gap:10px">
+        <label><span class="mono">Подъезд</span><input data-d="entrance" value="${NC.esc(d.entrance)}" placeholder="2"></label>
+        <label><span class="mono">Этаж</span><input data-d="floor" value="${NC.esc(d.floor)}" placeholder="5"></label>
+        <label><span class="mono">Домофон</span><input data-d="intercom" value="${NC.esc(d.intercom)}" placeholder="12К"></label>
+      </div>
+      <label><span class="mono">Комментарий курьеру</span><input data-d="note" value="${NC.esc(d.note)}" placeholder="Оставить у двери…"></label>
+      <span class="mono" style="margin-top:4px">Время доставки</span>
+      <div class="chips" data-slot>${state.data.slots.map(s =>
+        `<button type="button" class="chip ${d.slot === s.id ? 'on' : ''}" data-val="${s.id}" style="font-family:var(--mono);font-size:11px">${s.label}</button>`).join('')}</div>
+    </div>
+    <div class="card q">
+      <span class="q-title">Что-то ещё?</span>
+      <span class="q-note">Есть ли что-то, что поможет приготовить для вас идеальный рацион?</span>
+      <textarea data-p="extra" placeholder="Любые пожелания">${NC.esc(P().extra)}</textarea>
+    </div>
+    <span class="muted" style="font-size:12.5px;line-height:1.6">Оплата сейчас не потребуется. Мы свяжемся, подтвердим рацион и зону доставки, и только после этого откроем оплату.</span>
+  </div>`;
+}
+
+/* ---------- 7. заявка на согласовании ---------- */
+function step7() {
   const o = state.order || {};
-  const st = { pending: 'На согласовании', approved: 'Подтверждена', rejected: 'Отклонена', paid: 'Оплачена' }[o.status] || '—';
+  const st = { pending: 'на согласовании', approved: 'подтверждена', rejected: 'отклонена', paid: 'оплачена' }[o.status] || '—';
   return `<div class="col fade" style="gap:16px">
     <div class="card col" style="gap:14px">
       <div class="row" style="gap:12px">
         <span style="width:34px;height:34px;border-radius:50%;border:1px solid var(--gold);display:grid;place-items:center">◷</span>
-        <span class="serif" style="font-size:21px">Заявка ${st.toLowerCase()}</span>
+        <span class="serif" style="font-size:21px">Заявка ${st}</span>
       </div>
       <span class="muted" style="font-size:13.5px;line-height:1.6">Проверим состав рациона, зону и окно доставки и подтвердим заявку в течение дня. Оплата — только после подтверждения.</span>
       <div class="hr"></div>
@@ -131,8 +316,8 @@ function step3() {
   </div>`;
 }
 
-/* 4 — оплата */
-function step4() {
+/* ---------- 8. оплата ---------- */
+function step8() {
   const f = state.form, o = state.order || {};
   return `<div class="col fade" style="gap:14px">
     <div class="card col" style="gap:12px">${summary(o)}</div>
@@ -151,8 +336,8 @@ function step4() {
   </div>`;
 }
 
-/* 5 — готово */
-function step5() {
+/* ---------- 9. готово ---------- */
+function step9() {
   const o = state.order || {};
   return `<div class="col fade" style="gap:18px;align-items:center;text-align:center;padding:30px 0">
     <div style="width:96px;height:96px;border-radius:50%;background:var(--silk);display:grid;place-items:center;font-size:34px">✓</div>
@@ -163,34 +348,59 @@ function step5() {
 }
 
 function summary(o) {
-  const f = state.form;
+  const f = state.form, p = o.profile || P();
   const t = state.data.tariffs.find(x => x.id === (o.tariffId || f.tariffId)) || tariff();
-  const slot = (state.data.slots.find(s => s.id === (o.slot || f.slot)) || {}).label || '';
+  const d = p.delivery || {};
+  const slot = (state.data.slots.find(s => s.id === (o.slot || d.slot)) || {}).label || '';
   const rows = [
     ['Рацион', t.name + ' · ' + (o.planDays || t.days) + ' дней'],
-    ['Приёмов в день', String(o.meals || f.meals)],
-    ['Исключения', ((o.exclude || f.exclude).join(', ') || 'нет')],
+    ['Приёмов в день', String(o.meals || p.meals)],
+    ['Цель', (p.goals || []).join(', ')],
+    ['Медицинское', (p.medical || []).join(', ')],
+    ['Не едите', (p.dislikes || []).join(', ')],
+    ['Никогда', p.never],
     ['Имя', o.name || f.name],
     ['Телефон', o.phone || f.phone],
-    ['Адрес', [(o.address || f.address), (o.flat || f.flat)].filter(Boolean).join(', ')],
+    ['Адрес', [d.address, d.entrance && 'подъезд ' + d.entrance, d.floor && 'этаж ' + d.floor].filter(Boolean).join(', ')],
     ['Окно доставки', slot],
     ['Итого', NC.money(o.sum || sum())]
-  ];
-  return rows.map(([k, v]) => `<div class="row" style="justify-content:space-between;gap:14px;font-size:13px"><span class="muted">${k}</span><span style="text-align:right">${NC.esc(v)}</span></div>`).join('');
+  ].filter(r => r[1]);
+  return rows.map(([k, v]) =>
+    `<div class="row" style="justify-content:space-between;gap:14px;font-size:13px"><span class="muted">${k}</span><span style="text-align:right">${NC.esc(v)}</span></div>`).join('');
 }
 
 function wire() {
-  const f = state.form;
+  const f = state.form, p = P();
+  NC.bindPickers($('body'), p, () => { if (state.step === 1) render(); });
+
   document.querySelectorAll('[data-tariff]').forEach(el => el.onclick = () => { f.tariffId = el.dataset.tariff; render(); });
-  document.querySelectorAll('[data-meals]').forEach(el => el.onclick = () => { f.meals = +el.dataset.meals; render(); });
-  document.querySelectorAll('[data-slot]').forEach(el => el.onclick = () => { f.slot = el.dataset.slot; render(); });
   document.querySelectorAll('[data-pay]').forEach(el => el.onclick = () => { f.pay = el.dataset.pay; render(); });
-  document.querySelectorAll('[data-ex]').forEach(el => el.onclick = () => {
-    const v = el.dataset.ex;
-    f.exclude = f.exclude.includes(v) ? f.exclude.filter(x => x !== v) : f.exclude.concat([v]);
-    render();
-  });
   document.querySelectorAll('[data-f]').forEach(el => el.oninput = () => { f[el.dataset.f] = el.value; });
+  document.querySelectorAll('[data-p]').forEach(el => el.oninput = () => { p[el.dataset.p] = el.value; });
+  document.querySelectorAll('[data-d]').forEach(el => el.oninput = () => { p.delivery[el.dataset.d] = el.value; });
+  document.querySelectorAll('[data-k]').forEach(el => el.oninput = () => { p.kbju[el.dataset.k] = el.value; });
+
+  const kb = document.querySelector('[data-kbju]');
+  if (kb) kb.querySelectorAll('.chip').forEach(b => b.onclick = () => { p.kbju.on = b.dataset.on === '1'; render(); });
+
+  const sl = document.querySelector('[data-slot]');
+  if (sl) sl.querySelectorAll('.chip').forEach(b => b.onclick = () => {
+    sl.querySelectorAll('.chip').forEach(x => x.classList.remove('on'));
+    b.classList.add('on'); p.delivery.slot = b.dataset.val;
+  });
+
+  const known = $('known');
+  if (known) known.onclick = async () => {
+    const phone = prompt('Телефон, на который оформляли рацион:');
+    if (!phone) return;
+    try {
+      const r = await NC.api('/api/client/lookup', { method: 'POST', body: { phone } });
+      if (!r.found) return NC.toast('Не нашли такой телефон — заполните анкету');
+      applyKnown({ id: r.clientId, name: r.name, phone: phone, kitchen: r.kitchen }, r.profile);
+      state.welcome = true; render();
+    } catch (e) { NC.toast(e.message); }
+  };
+
   const pb = $('promo-btn');
   if (pb) pb.onclick = () => NC.toast(f.promo ? 'Промокод применим при оплате' : 'Введите промокод');
 }
@@ -198,34 +408,39 @@ function wire() {
 $('back').onclick = () => { if (state.step > 1) { state.step--; render(); } };
 
 $('cta').onclick = async () => {
-  const f = state.form;
+  const f = state.form, p = P();
   try {
-    if (state.step === 1) { state.step = 2; return render(); }
-    if (state.step === 2) {
-      if (!f.name || !f.phone || !f.address) return NC.toast('Заполните имя, телефон и адрес');
-      const r = await NC.api('/api/orders', { method: 'POST', body: f });
+    if (state.welcome) { state.welcome = false; state.step = 1; return render(); }
+    if (state.step < QSTEPS) { state.step++; return render(); }
+    if (state.step === QSTEPS) {
+      if (!f.name || !f.phone || !p.delivery.address) return NC.toast('Заполните имя, телефон и адрес');
+      const body = {
+        name: f.name, phone: f.phone, flat: p.delivery.intercom, promo: f.promo,
+        tariffId: f.tariffId, clientId: f.clientId, profile: p
+      };
+      const r = await NC.api('/api/orders', { method: 'POST', body: body });
       state.order = r.order; state.orderId = r.order.id;
       history.replaceState(null, '', '/order.html?order=' + r.order.id);
-      state.step = 3; return render();
+      state.step = 7; return render();
     }
-    if (state.step === 3) {
+    if (state.step === 7) {
       await refresh();
       if (state.order.status === 'pending') NC.toast('Заявка ещё на согласовании');
       if (state.order.status === 'rejected') NC.toast('Заявка отклонена — свяжитесь с нами');
       return render();
     }
-    if (state.step === 4) {
+    if (state.step === 8) {
       const r = await NC.api('/api/orders/' + state.orderId + '/pay', { method: 'POST', body: { pay: f.pay } });
       state.order = r.order;
       NC.setClient(r.clientId);
-      state.step = 5; return render();
+      state.step = 9; return render();
     }
     location.href = '/cabinet.html';
   } catch (e) { NC.toast(e.message); }
 };
 
 boot();
-setInterval(() => { if (state.step === 3) refresh().then(render).catch(() => {}); }, 8000);
+setInterval(() => { if (state.step === 7) refresh().then(render).catch(() => {}); }, 8000);
 </script>
 </body>
 </html>

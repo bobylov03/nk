@@ -11,6 +11,8 @@
   --r:16px;
   --shadow:0 4px 16px rgba(74,36,61,.09);
   --tile-r:22px;
+  --hero-r:32px;             /* скругление фото на главном экране — см. compare-radius.html */
+  --gold-solid:#b89666;
   --serif:'Cormorant Garamond',Georgia,serif;
   --sans:'Jost',system-ui,sans-serif;
   --mono:'JetBrains Mono',ui-monospace,monospace;
@@ -76,7 +78,25 @@ td{padding:11px 10px;border-top:1px solid var(--line);font-size:13px;vertical-al
 .nav .btn{font-size:11.5px;padding:11px 21px}
 .hero{background:linear-gradient(160deg,#fbf6ef,#f2e5d6);padding:80px 40px;display:grid;grid-template-columns:1.05fr .95fr;gap:48px;align-items:center}
 .hero h1{font-size:clamp(32px,6.2vw,54px);max-width:15em;text-wrap:pretty}
-.hero-photo{width:min(320px,76vw);aspect-ratio:1;border-radius:32px;background:center/cover no-repeat;box-shadow:0 24px 60px rgba(74,36,61,.22);justify-self:center}
+.hero-photo{position:relative;overflow:hidden;width:min(360px,80vw);aspect-ratio:1;border-radius:var(--hero-r);background:var(--silk) center/cover no-repeat;box-shadow:0 24px 60px rgba(74,36,61,.22);justify-self:center}
+.hero-photo i{position:absolute;inset:0;background:center/cover no-repeat;opacity:0;transition:opacity 1.2s ease}
+.hero-photo i.on{opacity:1}
+
+/* карточка блюда в меню дня */
+.dish-card{padding:12px 12px 18px;gap:11px;text-align:center;cursor:pointer;transition:transform .15s,box-shadow .15s}
+.dish-card:hover{transform:translateY(-3px);box-shadow:0 10px 26px rgba(74,36,61,.14)}
+.dish-photo{width:100%;aspect-ratio:1;border-radius:calc(var(--tile-r) - 5px);background:var(--silk) center/cover no-repeat;border:1px solid var(--gold)}
+.dish-name{font-size:clamp(20px,2vw,26px);line-height:1.14}
+.dish-macros{font-size:12px}
+
+/* выбранный тариф — золотая рамка */
+.card.sel{border-color:var(--gold-solid);box-shadow:inset 0 0 0 1px var(--gold-solid),var(--shadow)}
+
+/* соцсети */
+.socials{display:flex;gap:10px;align-items:center}
+.socials a{width:38px;height:38px;border-radius:50%;border:1px solid var(--line);display:grid;place-items:center;color:var(--plum);transition:background .15s,color .15s}
+.socials a:hover{background:var(--plum);color:var(--champagne);opacity:1}
+.socials svg{width:17px;height:17px;fill:currentColor;display:block}
 .section{padding:72px 40px;display:flex;flex-direction:column;gap:26px}
 .h-sec{font-size:clamp(26px,4.6vw,38px)}
 .split{flex-direction:row;align-items:center;justify-content:space-between;gap:40px;flex-wrap:wrap}
@@ -87,7 +107,7 @@ td{padding:11px 10px;border-top:1px solid var(--line);font-size:13px;vertical-al
 .section.silk{background:var(--silk)}
 .dark{background:var(--plum);color:var(--champagne)}
 .dark .muted{color:rgba(220,192,166,.7)}
-.footer{padding:34px 40px;display:flex;justify-content:space-between;gap:20px}
+.footer{padding:34px 40px;display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap}
 
 /* мобильные страницы (заказ, кабинет) */
 .phone{max-width:460px;margin:0 auto;min-height:100vh;background:#fbf6ef;display:flex;flex-direction:column}
@@ -158,9 +178,11 @@ td{padding:11px 10px;border-top:1px solid var(--line);font-size:13px;vertical-al
   .section{padding:52px 20px;gap:20px}
   .card{padding:16px}
   .tile.lg{width:min(150px,32vw);height:min(150px,32vw)}
+  .dish-card{padding:10px 10px 14px;gap:8px}
+  .footer{flex-direction:column;align-items:flex-start}
   #menu-note{text-align:left}
   .about{padding:52px 20px}
-  .footer{flex-direction:column;gap:10px;padding:28px 20px}
+  .footer{gap:14px;padding:28px 20px}
 }
 @media (max-width:560px){
   .nav .btn.ghost{display:none}
@@ -169,3 +191,66 @@ td{padding:11px 10px;border-top:1px solid var(--line);font-size:13px;vertical-al
   .hero h1{font-size:clamp(28px,8vw,42px)}
   .hero-photo{border-radius:24px}
 }
+
+/* ================= анкета, оценки, коллекция, отзывы ================= */
+.chips{display:flex;flex-wrap:wrap;gap:7px}
+.q{display:flex;flex-direction:column;gap:12px}
+.q-title{font-family:var(--serif);font-size:21px;line-height:1.2}
+.q-note{font-size:12.5px;line-height:1.55;color:var(--muted)}
+textarea{min-height:82px;resize:vertical;font-family:var(--sans);line-height:1.5}
+
+/* звёзды */
+.stars{display:flex;gap:3px}
+.stars button{background:none;border:0;cursor:pointer;padding:0 1px;font-size:21px;line-height:1;color:rgba(74,36,61,.22);transition:color .12s,transform .12s}
+.stars button.on{color:var(--gold-solid)}
+.stars button:hover{transform:scale(1.14)}
+.stars.sm button{font-size:14px}
+
+/* кнопки реакции на блюдо */
+.marks{display:flex;gap:7px;flex-wrap:wrap}
+.mark{display:inline-flex;align-items:center;gap:6px;padding:8px 13px;border-radius:100px;cursor:pointer;
+  border:1px solid var(--line);background:#faf3eb;color:var(--plum);font-family:var(--sans);font-size:12px;white-space:nowrap}
+.mark.on{background:var(--plum);border-color:var(--plum);color:var(--champagne)}
+.mark.on.never{background:#7a3b3b;border-color:#7a3b3b}
+
+/* сообщение от шефа */
+.chef{border-radius:var(--r);padding:18px 20px;background:linear-gradient(150deg,var(--plum),#5d2f4d);
+  color:var(--champagne);display:flex;flex-direction:column;gap:8px;box-shadow:0 10px 30px rgba(74,36,61,.22)}
+.chef .t{font-family:var(--serif);font-size:18px;line-height:1.45;white-space:pre-line}
+
+/* статистика */
+.stat-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);
+  padding:16px 14px;display:flex;flex-direction:column;gap:5px;align-items:flex-start}
+.stat b{font-family:var(--serif);font-size:30px;font-weight:500;line-height:1}
+.stat span{font-size:11.5px;line-height:1.35;color:var(--muted)}
+.stat i{font-style:normal;font-size:19px}
+
+/* коллекция */
+.coll{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.coll .it{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);
+  padding:10px;display:flex;flex-direction:column;gap:8px;cursor:pointer}
+.coll .ph{width:100%;aspect-ratio:1;border-radius:12px;background:var(--silk) center/cover no-repeat;border:1px solid var(--gold)}
+
+/* карусель отзывов на лендинге */
+.rev-track{display:flex;gap:16px;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:8px;scrollbar-width:none}
+.rev-track::-webkit-scrollbar{display:none}
+.rev{scroll-snap-align:start;flex:0 0 clamp(240px,30%,340px);background:var(--card);border:1px solid var(--line);
+  border-radius:var(--r);box-shadow:var(--shadow);padding:20px;display:flex;flex-direction:column;gap:11px}
+.rev p{margin:0;font-size:14px;line-height:1.6;color:var(--soft)}
+.rev-nav{display:flex;gap:8px}
+.rev-nav button{width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:transparent;
+  cursor:pointer;color:var(--plum);font-size:15px;line-height:1}
+.rev-nav button:hover{background:var(--plum);color:var(--champagne)}
+
+/* личное дело клиента в админке */
+.dossier{display:grid;grid-template-columns:300px 1fr;gap:18px;align-items:start}
+.dossier .ph{width:100%;aspect-ratio:1;border-radius:var(--r);background:var(--silk) center/cover no-repeat;border:1px solid var(--gold);display:grid;place-items:center}
+.kv{display:flex;flex-direction:column;gap:9px}
+.kv > div{display:flex;justify-content:space-between;gap:14px;font-size:13px}
+.kv b{font-weight:400;text-align:right;max-width:60%}
+.tag{display:inline-block;padding:4px 10px;border-radius:100px;font-size:11.5px;background:rgba(74,36,61,.07);margin:0 4px 4px 0}
+.tag.warn{background:rgba(122,59,59,.1);color:#7a3b3b}
+
+@media (max-width:900px){.dossier{grid-template-columns:1fr}}
+@media (max-width:560px){.stat-grid{grid-template-columns:1fr}.coll{grid-template-columns:1fr}}

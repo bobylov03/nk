@@ -32,7 +32,7 @@
     <p id="text" style="margin:0;font-size:16px;line-height:1.6;max-width:30em"></p>
     <a class="btn" id="cta" href="/order.html" style="align-self:flex-start;border:0"></a>
   </div>
-  <div class="hero-photo" style="background-image:url('/img/food-toast.jpg')"></div>
+  <div class="hero-photo" id="hero-photo"></div>
 </div>
 
 <div class="section" id="menu">
@@ -70,6 +70,20 @@
   <div class="grid" id="tariff-grid"></div>
 </div>
 
+<div class="section silk" id="reviews" hidden>
+  <div class="row" style="justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:16px">
+    <div class="col" style="gap:8px">
+      <h2 class="h-sec" id="rev-title"></h2>
+      <span class="muted" style="font-size:13.5px;max-width:32em" id="rev-note"></span>
+    </div>
+    <div class="rev-nav">
+      <button id="rev-prev" aria-label="Назад">‹</button>
+      <button id="rev-next" aria-label="Вперёд">›</button>
+    </div>
+  </div>
+  <div class="rev-track" id="rev-track"></div>
+</div>
+
 <div class="section dark split" id="delivery">
   <div class="col" style="gap:12px;max-width:36em">
     <h2 class="h-sec" style="color:var(--champagne)" id="del-title"></h2>
@@ -80,6 +94,7 @@
 
 <div class="footer">
   <span class="mono">MEALS MADE AROUND YOU</span>
+  <div class="socials" id="socials"></div>
   <span class="mono" id="footer"></span>
 </div>
 
@@ -101,6 +116,31 @@
   document.getElementById('footer').textContent = c.footer;
   document.getElementById('menu-day').textContent = NC.dateRu(data.today.date, { weekday: 'long', day: 'numeric', month: 'long' });
 
+  // главный экран: мягкая смена 2–3 фото (файлы задаются в админке)
+  const photos = String(c.hero_photos || 'food-toast.jpg').split(',').map(x => x.trim()).filter(Boolean);
+  const hp = document.getElementById('hero-photo');
+  hp.innerHTML = photos.map((f, i) => `<i class="${i ? '' : 'on'}" style="background-image:url('/img/${f}')"></i>`).join('');
+  if (photos.length > 1) {
+    let n = 0;
+    setInterval(() => {
+      hp.children[n].classList.remove('on');
+      n = (n + 1) % hp.children.length;
+      hp.children[n].classList.add('on');
+    }, 4500);
+  }
+
+  // соцсети в подвале — показываем только заполненные
+  const ICONS = {
+    social_tg: ['Telegram', 'M21.9 4.3 2.9 11.6c-1 .4-1 1.7 0 2l4.8 1.5 1.8 5.6c.3.8 1.3 1 1.9.4l2.7-2.6 4.8 3.5c.7.5 1.7.1 1.9-.7l3.1-15c.2-1-.7-1.9-1.7-1.5zM8.9 14.4 18 8.2l-7.4 7.1-.3 3.3-1.4-4.2z'],
+    social_ig: ['Instagram', 'M12 2.2c3.2 0 3.6 0 4.9.1 3.3.1 4.8 1.7 4.9 4.9.1 1.3.1 1.6.1 4.8s0 3.6-.1 4.9c-.1 3.2-1.7 4.8-4.9 4.9-1.3.1-1.6.1-4.9.1s-3.6 0-4.9-.1c-3.2-.1-4.8-1.7-4.9-4.9C2.1 15.6 2.1 15.2 2.1 12s0-3.6.1-4.9c.1-3.2 1.7-4.8 4.9-4.9C8.4 2.2 8.8 2.2 12 2.2zm0 3.2a6.6 6.6 0 1 0 0 13.2 6.6 6.6 0 0 0 0-13.2zm0 10.9a4.3 4.3 0 1 1 0-8.6 4.3 4.3 0 0 1 0 8.6zm6.9-11.1a1.5 1.5 0 1 0 0 3.1 1.5 1.5 0 0 0 0-3.1z'],
+    social_wa: ['WhatsApp', 'M12 2a10 10 0 0 0-8.6 15L2 22l5.2-1.4A10 10 0 1 0 12 2zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3.1.8.8-3-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.6-6.1c-.3-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.1-.2 0-.4.1-.5l.4-.5c.1-.2.2-.3.3-.5v-.5l-.8-1.9c-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.5.1-.7.3-.9.9-1.1 2.1-.5 3.4a11 11 0 0 0 4.6 4.6c1.6.7 2.7.7 3.6.4.5-.2 1.2-.8 1.4-1.4.1-.4.1-.8.1-.9-.1-.1-.2-.2-.5-.2z'],
+    social_tt: ['TikTok', 'M16.6 2h-3.1v13.4a2.6 2.6 0 1 1-2.2-2.6V9.6a5.8 5.8 0 1 0 5.3 5.8V8.9c1.1.8 2.5 1.3 4 1.3V7.1c-2.3 0-4-1.9-4-5.1z']
+  };
+  document.getElementById('socials').innerHTML = Object.keys(ICONS)
+    .filter(k => c[k])
+    .map(k => `<a href="${NC.esc(c[k])}" target="_blank" rel="noopener" aria-label="${ICONS[k][0]}" title="${ICONS[k][0]}" style="border:0">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="${ICONS[k][1]}"/></svg></a>`).join('');
+
   ['about_kicker', 'about_title', 'about_text', 'about_sign'].forEach(k => {
     const el = document.getElementById(k.replace('_', '-'));
     if (el) el.textContent = c[k] || '';
@@ -113,11 +153,11 @@
   }
 
   document.getElementById('menu-grid').innerHTML = data.today.slots.map(s => `
-    <div class="card col" data-dish="${s.dish ? s.dish.id : ''}" style="gap:14px;align-items:center;text-align:center;cursor:pointer">
-      ${NC.tile(s.dish, 'lg')}
+    <div class="card col dish-card" data-dish="${s.dish ? s.dish.id : ''}">
+      <div class="dish-photo" style="${s.dish && s.dish.img ? `background-image:url('/img/${s.dish.img}')` : ''}"></div>
       <span class="mono">${s.catLabel}</span>
-      <span class="serif" style="font-size:21px;line-height:1.2">${NC.esc(s.dish ? s.dish.name : 'уточняется')}</span>
-      <span class="muted" style="font-size:12px">${s.dish ? NC.macros(s.dish) + ' · ' + s.dish.weight + ' г' : ''}</span>
+      <span class="serif dish-name">${NC.esc(s.dish ? s.dish.name : 'уточняется')}</span>
+      <span class="muted dish-macros">${s.dish ? NC.macros(s.dish) + ' · ' + s.dish.weight + ' г' : ''}</span>
     </div>`).join('');
 
   document.getElementById('steps').innerHTML = (c.steps || []).map(s => `
@@ -143,6 +183,32 @@
       </div>
     </a>`).join('');
   document.querySelectorAll('#tariff-grid a').forEach(a => a.style.borderBottom = '1px solid var(--line)');
+
+  // отзывы клиентов — показываем блок, только если есть что показать
+  try {
+    const rev = (await NC.api('/api/reviews')).reviews || [];
+    if (rev.length) {
+      document.getElementById('reviews').hidden = false;
+      document.getElementById('rev-title').textContent = c.reviews_title || 'Что говорят о блюдах';
+      document.getElementById('rev-note').textContent = c.reviews_note || '';
+      const track = document.getElementById('rev-track');
+      track.innerHTML = rev.map(r => `
+        <div class="rev">
+          <div class="row" style="gap:11px">
+            <div class="tile sm" style="${r.img ? `background-image:url('/img/${r.img}')` : ''}"></div>
+            <div class="col" style="gap:2px;min-width:0">
+              <span class="serif" style="font-size:17px;line-height:1.15">${NC.esc(r.dish)}</span>
+              <span style="color:var(--gold-solid);font-size:12px">${'★'.repeat(r.stars)}</span>
+            </div>
+          </div>
+          <p>${NC.esc(r.text)}</p>
+          <span class="mono">${NC.esc(r.author)} · ${NC.dateRu(r.date)}</span>
+        </div>`).join('');
+      const step = () => Math.max(240, track.firstElementChild.offsetWidth + 16);
+      document.getElementById('rev-prev').onclick = () => track.scrollBy({ left: -step(), behavior: 'smooth' });
+      document.getElementById('rev-next').onclick = () => track.scrollBy({ left: step(), behavior: 'smooth' });
+    }
+  } catch (e) { /* отзывов нет — блок остаётся скрытым */ }
 
   const RU = { breakfast: 'Завтрак', lunch: 'Обед', dinner: 'Ужин', snack: 'Перекус' };
   const all = (await NC.api('/api/dishes')).dishes.map(d => Object.assign({}, d, { catLabel: RU[d.cat] }));

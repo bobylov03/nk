@@ -29,6 +29,58 @@ const NC = {
     document.body.appendChild(el);
     setTimeout(() => el.remove(), 2600);
   },
+  plural: (n, one, few, many) => {
+    const a = Math.abs(n) % 100, b = a % 10;
+    if (a > 10 && a < 20) return many;
+    if (b > 1 && b < 5) return few;
+    if (b === 1) return one;
+    return many;
+  },
+  /* набор чипов-переключателей: NC.chips('goals', OPTS.goals, выбранные) */
+  chips(field, options, chosen, limit) {
+    const on = chosen || [];
+    return `<div class="chips" data-chips="${field}"${limit ? ` data-limit="${limit}"` : ''}>` +
+      options.map(o => `<button type="button" class="chip ${on.includes(o) ? 'on' : ''}" data-val="${NC.esc(o)}">${NC.esc(o)}</button>`).join('') +
+      `</div>`;
+  },
+  /* один выбор из списка */
+  radios(field, options, value) {
+    return `<div class="chips" data-radio="${field}">` +
+      options.map(o => `<button type="button" class="chip ${String(o) === String(value) ? 'on' : ''}" data-val="${NC.esc(o)}">${NC.esc(o)}</button>`).join('') +
+      `</div>`;
+  },
+  stars(value, dishId, date) {
+    return `<div class="stars" data-stars="${dishId}" data-date="${date || ''}">` +
+      [1, 2, 3, 4, 5].map(n => `<button type="button" class="${n <= value ? 'on' : ''}" data-n="${n}" aria-label="${n} из 5">★</button>`).join('') +
+      `</div>`;
+  },
+  /* навешивает поведение на чипы/радио/звёзды внутри host */
+  bindPickers(host, model, onChange) {
+    host.querySelectorAll('[data-chips]').forEach(box => {
+      const field = box.dataset.chips, limit = +box.dataset.limit || 0;
+      box.querySelectorAll('.chip').forEach(b => b.onclick = () => {
+        const v = b.dataset.val;
+        const list = model[field] || (model[field] = []);
+        const i = list.indexOf(v);
+        if (i >= 0) list.splice(i, 1);
+        else {
+          if (limit && list.length >= limit) return NC.toast('Можно выбрать не больше ' + limit);
+          list.push(v);
+        }
+        b.classList.toggle('on');
+        if (onChange) onChange(field, list);
+      });
+    });
+    host.querySelectorAll('[data-radio]').forEach(box => {
+      const field = box.dataset.radio;
+      box.querySelectorAll('.chip').forEach(b => b.onclick = () => {
+        box.querySelectorAll('.chip').forEach(x => x.classList.remove('on'));
+        b.classList.add('on');
+        model[field] = isNaN(b.dataset.val) ? b.dataset.val : +b.dataset.val;
+        if (onChange) onChange(field, model[field]);
+      });
+    });
+  },
   dateRu(iso, opts) {
     return new Date(iso).toLocaleDateString('ru-RU', opts || { day: 'numeric', month: 'long' });
   },

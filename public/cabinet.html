@@ -3,248 +3,659 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>NC meals — личный кабинет</title>
+<title>NC meals — админ-панель</title>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=Jost:wght@300;400;500&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/css/nc.css">
 </head>
 <body>
-<div class="phone">
-  <div id="login" class="col" style="gap:16px;padding:60px 24px">
-    <h1 class="serif" style="font-size:30px">Личный кабинет</h1>
-    <span class="muted" style="font-size:13.5px;line-height:1.6">Введите телефон, указанный при оформлении рациона. В демо-данных есть <b>+995 555 12 34 56</b>.</span>
-    <label><span class="mono">Телефон</span><input id="phone" placeholder="+995 555 12 34 56"></label>
-    <button class="btn wide" id="enter">Войти</button>
-    <a href="/" style="font-size:13px">На главную</a>
-  </div>
 
-  <div id="app" class="hidden" style="display:flex;flex-direction:column;flex:1">
-    <header>
-      <div class="row" style="justify-content:space-between">
-        <div class="col" style="gap:2px">
-          <span class="serif" id="hello" style="font-size:26px"></span>
-          <span class="mono" id="sub"></span>
-        </div>
-        <button class="btn ghost sm" id="exit" style="border-radius:100px">Выйти</button>
+<div id="login" class="col" style="max-width:380px;margin:12vh auto;gap:16px;padding:0 24px">
+  <h1 class="serif" style="font-size:30px">Админ-панель NC meals</h1>
+  <span class="muted" style="font-size:13.5px">Пароль по умолчанию: <b>nc2026</b> (меняется в data/db.json).</span>
+  <label><span class="mono">Пароль</span><input id="pass" type="password" placeholder="••••••"></label>
+  <button class="btn wide" id="enter">Войти</button>
+  <a href="/" style="font-size:13px">На сайт</a>
+</div>
+
+<div id="app" class="admin hidden">
+  <aside class="side">
+    <div id="logo"></div>
+    <nav id="nav"></nav>
+    <div class="col" style="margin-top:auto;gap:8px;padding:14px;border-radius:12px;background:rgba(220,192,166,.08)">
+      <span class="mono" style="color:rgba(220,192,166,.6)">Следующий цикл</span>
+      <span class="serif" style="font-size:17px;color:var(--champagne)" id="cycle"></span>
+      <button class="btn light sm" id="logout">Выйти</button>
+    </div>
+  </aside>
+  <main>
+    <div class="topbar">
+      <div class="col" style="gap:3px">
+        <span class="serif" id="sec-title" style="font-size:24px"></span>
+        <span class="mono" id="sec-sub"></span>
       </div>
-    </header>
-    <main id="body"></main>
-    <div class="tabbar" id="tabs"></div>
-  </div>
+      <div class="row" style="gap:10px">
+        <input id="search" placeholder="Поиск блюда или клиента" style="width:260px;border-radius:100px">
+        <button class="btn" id="new-dish">+ Новое блюдо</button>
+      </div>
+    </div>
+    <div class="content" id="body"></div>
+  </main>
 </div>
 
 <script src="/js/nc.js"></script>
-<script src="/js/dish-sheet.js"></script>
 <script>
-const CAT_ORDER = ['breakfast', 'lunch', 'dinner', 'snack'];
-const state = { tab: 'today', d: null, swap: null };
+const CATS = [['breakfast', 'Завтрак'], ['lunch', 'Обед'], ['dinner', 'Ужин'], ['snack', 'Перекус']];
+const catLabel = (id) => (CATS.find(c => c[0] === id) || [, '—'])[1];
+const state = {
+  dossier: null, sec: 'dash', s: null, cat: 'all', q: '', form: 'smart', smart: '', ing: '', bulk: '', drag: null };
 const $ = (id) => document.getElementById(id);
-
-const RU = { breakfast: 'Завтрак', lunch: 'Обед', dinner: 'Ужин', snack: 'Перекус' };
-async function load() {
-  const id = NC.clientId();
-  if (!id) return;
-  try {
-    state.d = await NC.api('/api/client/' + id);
-    window.__dishes = (await NC.api('/api/dishes')).dishes.map(d => Object.assign({}, d, { catLabel: RU[d.cat] }));
-    $('login').classList.add('hidden');
-    $('app').classList.remove('hidden');
-    render();
-  } catch (e) { localStorage.removeItem('nc_client'); }
-}
 
 $('enter').onclick = async () => {
   try {
-    const r = await NC.api('/api/client/login', { method: 'POST', body: { phone: $('phone').value } });
-    NC.setToken(r.token); NC.setClient(r.clientId);
-    load();
+    const r = await NC.api('/api/admin/login', { method: 'POST', body: { password: $('pass').value } });
+    NC.setToken(r.token); boot();
   } catch (e) { NC.toast(e.message); }
 };
-$('exit').onclick = () => { localStorage.removeItem('nc_client'); location.reload(); };
+$('logout').onclick = () => { localStorage.removeItem('nc_token'); location.reload(); };
+$('search').oninput = (e) => { state.q = e.target.value.toLowerCase(); render(); };
+$('new-dish').onclick = () => { state.sec = 'new'; render(); };
+
+async function boot() {
+  try {
+    state.s = await NC.api('/api/admin/state');
+    $('login').classList.add('hidden');
+    $('app').classList.remove('hidden');
+    $('logo').innerHTML = NC.logo(46);
+    render();
+  } catch (e) { /* нет токена — остаётся форма входа */ }
+}
+async function reload() { state.s = await NC.api('/api/admin/state'); render(); }
+
+const SECTIONS = [
+  ['dash', 'Дашборд', () => state.s.requests.filter(r => r.status === 'pending').length + state.s.orders.filter(o => o.status === 'pending').length || ''],
+  ['dishes', 'Блюда', () => state.s.dishes.length],
+  ['menu', 'Меню дня', () => 7],
+  ['new', 'Добавить блюда', () => '★'],
+  ['plans', 'Тарифы и цены', () => state.s.tariffs.length],
+  ['clients', 'Клиенты', () => state.s.clients.length],
+  ['orders', 'Заказы', () => state.s.orders.length],
+  ['reviews', 'Отзывы', () => (state.s.ratings || []).filter(r => r.text && !r.published).length || ''],
+  ['content', 'Контент сайта', () => '']
+];
+const TITLES = {
+  dash: ['Дашборд', 'заявки, запросы, доставки'],
+  dishes: ['Библиотека блюд', 'название, кбжу, состав, цена'],
+  menu: ['Меню дня', 'drag-and-drop сборка недели'],
+  new: ['Добавление блюд', 'умная строка или таблица'],
+  plans: ['Тарифы и цены', 'подписки 7 / 14 / 30 дней'],
+  clients: ['Клиенты и подписки', 'рационы и остатки дней'],
+  orders: ['Заказы и заявки', 'анкета → подтверждение → оплата'],
+  reviews: ['Отзывы о блюдах', 'оценки клиентов и публикация на сайте'],
+  content: ['Контент сайта', 'тексты главной страницы']
+};
 
 function render() {
-  const c = state.d.client;
-  $('hello').textContent = 'Здравствуйте, ' + c.name.split(' ')[0];
-  $('sub').textContent = 'NC · ' + c.planDays + ' дней · ' + NC.dateRu(state.d.today.date, { weekday: 'long', day: 'numeric', month: 'short' });
-  $('tabs').innerHTML = [['today', '◉', 'Сегодня'], ['tomorrow', '◐', 'Завтра'], ['calendar', '▤', 'Календарь'], ['profile', '◇', 'Профиль']]
-    .map(([id, ic, label]) => `<button class="${state.tab === id ? 'on' : ''}" data-tab="${id}"><span style="font-size:16px">${ic}</span>${label}</button>`).join('');
-  document.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => { state.tab = b.dataset.tab; render(); });
-  $('body').innerHTML = ({ today: viewToday, tomorrow: viewTomorrow, calendar: viewCalendar, profile: viewProfile })[state.tab]();
+  $('nav').innerHTML = SECTIONS.map(([id, label, badge]) =>
+    `<button class="${state.sec === id ? 'on' : ''}" data-sec="${id}">${label}<span class="mono" style="opacity:.6;letter-spacing:.1em">${badge()}</span></button>`).join('');
+  document.querySelectorAll('[data-sec]').forEach(b => b.onclick = () => { state.sec = b.dataset.sec; render(); });
+  $('sec-title').textContent = TITLES[state.sec][0];
+  $('sec-sub').textContent = TITLES[state.sec][1];
+  $('cycle').textContent = 'нужно ' + Math.max(0, 40 - state.s.dishes.length) + ' новых блюд';
+  $('body').innerHTML = ({ dash, dishes, menu, new: formNew, plans, clients, orders, reviews, content })[state.sec]();
   wire();
-  if (window.__dishes) bindSheet($('body'), window.__dishes);
 }
 
-function planCard() {
-  const c = state.d.client;
-  const pct = Math.round(c.daysLeft / Math.max(1, c.planDays) * 100);
-  return `<div class="card col" style="gap:16px">
-    <div class="row" style="justify-content:space-between">
-      <span class="mono">Рацион · осталось</span><span style="font-size:11px;letter-spacing:.1em">NC · ${c.planDays} дней</span>
-    </div>
-    <div class="row" style="gap:18px">
-      <div style="width:84px;height:84px;border-radius:50%;background:conic-gradient(var(--plum) ${pct}%, rgba(74,36,61,.12) 0);display:grid;place-items:center;flex:0 0 auto">
-        <div style="width:64px;height:64px;border-radius:50%;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center">
-          <span class="serif" style="font-size:26px;line-height:1">${c.daysLeft}</span><span class="mono" style="font-size:8px">ДНЕЙ</span>
-        </div>
-      </div>
-      <div class="col" style="gap:8px;flex:1">
-        <div class="row" style="justify-content:space-between;font-size:13px"><span>Следующая доставка</span><span>${c.paused ? 'перенесена' : 'завтра, ' + slotLabel(c.slot)}</span></div>
-        <div class="row" style="justify-content:space-between;font-size:13px"><span>Статус</span><span>${c.paused ? 'на паузе' : 'активен'}</span></div>
-        <div class="row" style="gap:8px">
-          <button class="btn ghost sm" id="pause" style="flex:1">${c.paused ? 'Возобновить' : 'Пауза'}</button>
-          <button class="btn sm" data-tab-jump="profile" style="flex:1">Продлить</button>
-        </div>
-      </div>
-    </div>
-  </div>`;
-}
-
-function slotLabel(id) {
-  return ({ s1: '08:00–09:00', s2: '09:00–10:00', s3: '10:00–11:00' })[id] || '08:00–09:00';
-}
-
-function mealRow(s, date, canSwap) {
-  return `<div class="meal" data-dish="${s.dish ? s.dish.id : ''}" style="cursor:pointer">
-    ${NC.tile(s.dish)}
-    <div class="col" style="gap:5px;flex:1;min-width:0">
-      <span class="mono" style="font-size:9px">${s.catLabel}</span>
-      <span class="serif" style="font-size:19px;line-height:1.15">${NC.esc(s.dish ? s.dish.name : 'уточняется')}</span>
-      <span class="muted" style="font-size:11px">${s.dish ? NC.macros(s.dish) + ' · ' + s.dish.weight + ' г' : ''}</span>
-    </div>
-    ${canSwap ? `<button class="btn ghost sm" data-swap="${s.cat}" data-date="${date}" style="padding:8px 12px;font-size:10px">Запросить замену</button>` : ''}
-  </div>`;
-}
-
-function requestNotice() {
-  const pending = state.d.requests.filter(r => r.status === 'pending');
-  if (!pending.length) return '';
-  return `<div class="card row" style="gap:10px;border-color:var(--gold)">
-    <span style="width:6px;height:6px;border-radius:50%;background:var(--plum)"></span>
-    <span style="font-size:12.5px;line-height:1.5">${pending.map(r => NC.esc(r.text)).join('; ')} — ждём подтверждения до 18:00.</span>
-  </div>`;
-}
-
-function viewToday() {
-  const t = state.d.today, n = state.d.norms;
-  const bars = [['Белки', t.totals.p, n.p, 'г'], ['Жиры', t.totals.f, n.f, 'г'], ['Углеводы', t.totals.c, n.c, 'г'], ['Калории', t.totals.kcal, n.kcal, 'ккал']];
-  return `<div class="col fade" style="gap:16px">
-    ${planCard()}
-    <div class="row" style="justify-content:space-between;align-items:baseline">
-      <span class="serif" style="font-size:22px">Меню на сегодня</span><span class="mono" style="font-size:9px">today’s menu</span>
-    </div>
-    ${requestNotice()}
-    ${t.slots.map(s => mealRow(s, t.date, false)).join('')}
-    <div class="card col dark" style="gap:14px;background:var(--plum);border:0">
+/* ---------- дашборд ---------- */
+function dash() {
+  const s = state.s;
+  const pendingOrders = s.orders.filter(o => o.status === 'pending');
+  const pendingReq = s.requests.filter(r => r.status === 'pending');
+  const stats = [
+    ['Активных рационов', s.clients.filter(c => c.daysLeft > 0).length, 'из ' + s.clients.length + ' клиентов'],
+    ['Заявок в ожидании', pendingOrders.length, 'анкеты без оплаты'],
+    ['Запросов замены', pendingReq.length, 'подтвердите до 18:00'],
+    ['Блюд в библиотеке', s.dishes.length, 'цикл обновляется за 10 дней']
+  ];
+  return `<div class="stats">${stats.map(([k, v, d]) => `<div class="card col" style="gap:8px">
+      <span class="mono">${k}</span><span class="serif" style="font-size:32px;line-height:1">${v}</span><span style="font-size:11.5px">${d}</span>
+    </div>`).join('')}</div>
+    <div class="card col" style="gap:14px">
       <div class="row" style="justify-content:space-between;align-items:baseline">
-        <span class="serif" style="font-size:19px;color:var(--champagne)">КБЖУ дня</span>
-        <span class="mono" style="color:rgba(220,192,166,.6)">${t.totals.kcal} ккал из ${n.kcal}</span>
+        <span class="serif" style="font-size:19px">Заявки и запросы</span>
+        <span class="mono">${pendingOrders.length + pendingReq.length ? (pendingOrders.length + pendingReq.length) + ' ждут ответа' : 'пусто'}</span>
       </div>
-      ${bars.map(([label, v, max, unit]) => `
-        <div class="col" style="gap:5px">
-          <div class="row" style="justify-content:space-between;font-size:11px;color:rgba(220,192,166,.85)"><span>${label}</span><span>${v} ${unit}</span></div>
-          <div class="bar"><i style="width:${Math.min(100, Math.round(v / max * 100))}%"></i></div>
-        </div>`).join('')}
+      <div class="hr"></div>
+      ${pendingOrders.map(o => row(o.name, 'Новая заявка · ' + o.planDays + ' дней, ' + o.meals + ' приёма' + (o.exclude.length ? ', без ' + o.exclude.join(', ').toLowerCase() : ''), 'order', o.id)).join('')}
+      ${pendingReq.map(r => row(r.client, r.text, 'request', r.id)).join('')}
+      ${!pendingOrders.length && !pendingReq.length ? '<span class="muted" style="font-size:13px">Все заявки обработаны.</span>' : ''}
     </div>
-  </div>`;
-}
-
-function viewTomorrow() {
-  const t = state.d.tomorrow;
-  return `<div class="col fade" style="gap:16px">
-    <div class="row" style="justify-content:space-between;align-items:baseline">
-      <span class="serif" style="font-size:22px">Что будет завтра</span><span class="mono" style="font-size:9px">${NC.dateRu(t.date)}</span>
-    </div>
-    ${requestNotice()}
-    ${t.slots.map(s => mealRow(s, t.date, true)).join('')}
-    <div class="card" style="border-color:var(--gold);font-size:12px;line-height:1.5">Запросы на замену принимаются до 18:00 — каждую замену подтверждаем вручную.</div>
-    ${state.swap ? swapSheet() : ''}
-  </div>`;
-}
-
-function swapSheet() {
-  const cat = state.swap.cat;
-  const all = window.__dishes || [];
-  return `<div class="card col" style="gap:12px;border-color:var(--plum)">
-    <span class="serif" style="font-size:20px">Замена · ${({ breakfast: 'Завтрак', lunch: 'Обед', dinner: 'Ужин', snack: 'Перекус' })[cat]}</span>
-    <div class="col" style="gap:8px" id="swap-options">${all.filter(d => d.cat === cat).map(d => `
-      <div class="row" data-pick="${d.id}" style="gap:12px;padding:10px;border:1px solid var(--line);border-radius:12px;cursor:pointer">
-        ${NC.tile(d, 'sm')}
-        <span class="col" style="flex:1;gap:2px"><span class="serif" style="font-size:17px">${NC.esc(d.name)}</span><span class="muted" style="font-size:11px">${NC.macros(d)}</span></span>
-        <span class="mono" style="font-size:10px">Запросить</span>
-      </div>`).join('') || '<span class="muted" style="font-size:13px">Нет альтернатив в этой категории</span>'}</div>
-    <button class="btn ghost" id="swap-cancel">Отмена</button>
-  </div>`;
-}
-
-function viewCalendar() {
-  const c = state.d.client;
-  return `<div class="col fade" style="gap:16px">
-    <span class="serif" style="font-size:22px">Календарь доставок</span>
-    <div class="cal">${state.d.calendar.map(d => `
-      <div class="${[d.active ? 'active' : '', d.paused ? 'paused' : '', d.date === state.d.today.date ? 'today' : ''].join(' ')}">
-        <span>${d.day}</span><i></i>
-      </div>`).join('')}</div>
-    <div class="row muted" style="gap:16px;font-size:11px"><span>● доставка</span><span>● пауза</span><span>○ вне рациона</span></div>
     <div class="card col" style="gap:12px">
-      <span class="mono">Адрес доставки</span>
-      <span style="font-size:14px">${NC.esc(c.address)}</span>
-      <span class="muted" style="font-size:12.5px">Окно: ${slotLabel(c.slot)}${c.notes ? ' · ' + NC.esc(c.notes) : ''}</span>
-      <div class="row" style="gap:8px">
-        <button class="btn ghost sm" id="pause" style="flex:1">${c.paused ? 'Возобновить' : 'Перенести доставку'}</button>
+      <span class="serif" style="font-size:19px">Доставки на сегодня</span>
+      <table><tbody>${s.clients.filter(c => c.daysLeft > 0).map(c => `<tr>
+        <td>${NC.esc(c.name)}</td><td class="muted">${NC.esc(c.address)}</td>
+        <td class="mono" style="letter-spacing:.05em">${(s.slots.find(x => x.id === c.slot) || {}).label || ''}</td>
+        <td style="text-align:right"><span class="badge">${c.paused ? 'Пауза' : 'В работе'}</span></td></tr>`).join('')}</tbody></table>
+    </div>`;
+}
+function row(who, text, kind, id) {
+  return `<div class="row" style="gap:16px">
+    <span style="width:26%">${NC.esc(who)}</span>
+    <span class="muted" style="flex:1;font-size:13px">${NC.esc(text)}</span>
+    <button class="btn sm" data-ok="${kind}:${id}">Подтвердить</button>
+    <button class="btn ghost sm" data-no="${kind}:${id}">Отклонить</button>
+  </div>`;
+}
+
+/* ---------- блюда ---------- */
+function dishes() {
+  const list = state.s.dishes.filter(d =>
+    (state.cat === 'all' || d.cat === state.cat) &&
+    (!state.q || (d.name + ' ' + d.ing).toLowerCase().includes(state.q)));
+  return `<div class="row" style="gap:8px;flex-wrap:wrap">
+      ${[['all', 'Все']].concat(CATS).map(([id, label]) => `<button class="chip ${state.cat === id ? 'on' : ''}" data-cat="${id}">${label}</button>`).join('')}
+      <span class="mono" style="margin-left:auto">${list.length} блюд</span>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden">
+      <table>
+        <thead><tr><th style="width:56px">Фото</th><th>Блюдо</th><th>Категория</th><th>Кухня</th><th>КБЖУ</th><th>Вес</th><th>Цена</th><th></th></tr></thead>
+        <tbody>${list.map(d => `<tr>
+          <td>${NC.tile(d, 'sm')}</td>
+          <td><div class="col" style="gap:3px">
+            <input data-edit="${d.id}:name" value="${NC.esc(d.name)}" style="border:0;padding:0;font-family:var(--serif);font-size:17px;background:transparent">
+            <span class="muted" style="font-size:11px">${NC.esc((d.tags || []).join(' · ') + (d.ing ? (d.tags.length ? ' — ' : '') + d.ing : ''))}</span>
+            <input data-edit="${d.id}:desc" value="${NC.esc(d.desc || '')}" placeholder="описание для клиента" style="border:0;padding:0;background:transparent;font-size:12px;color:rgba(74,36,61,.75)">
+            <input data-edit="${d.id}:why" value="${NC.esc(d.why || '')}" placeholder="почему это блюдо сегодня" style="border:0;padding:0;background:transparent;font-size:12px;color:rgba(74,36,61,.75)">
+          </div></td>
+          <td><select data-edit="${d.id}:cat" style="border:0;background:transparent;padding:0;font-size:13px">
+            ${CATS.map(([id, label]) => `<option value="${id}" ${d.cat === id ? 'selected' : ''}>${label}</option>`).join('')}
+          </select></td>
+          <td><input data-edit="${d.id}:cuisine" value="${NC.esc(d.cuisine || '')}" placeholder="домашняя" style="width:104px;border:0;padding:0;background:transparent;font-size:12.5px"></td>
+          <td class="mono" style="letter-spacing:.05em;white-space:nowrap">
+            <input data-edit="${d.id}:kcal" value="${d.kcal}" style="width:44px;border:0;padding:0;background:transparent;font-family:var(--mono);font-size:12px"> /
+            <input data-edit="${d.id}:p" value="${d.p}" style="width:26px;border:0;padding:0;background:transparent;font-family:var(--mono);font-size:12px">·<input data-edit="${d.id}:f" value="${d.f}" style="width:26px;border:0;padding:0;background:transparent;font-family:var(--mono);font-size:12px">·<input data-edit="${d.id}:c" value="${d.c}" style="width:26px;border:0;padding:0;background:transparent;font-family:var(--mono);font-size:12px">
+          </td>
+          <td><input data-edit="${d.id}:weight" value="${d.weight}" style="width:56px;border:0;padding:0;background:transparent;font-size:13px"> г</td>
+          <td><input data-edit="${d.id}:price" value="${d.price}" style="width:46px;border:0;padding:0;background:transparent;font-size:13px"> ${NC.cur}</td>
+          <td style="text-align:right;white-space:nowrap">
+            <button class="chip" data-dup="${d.id}" title="Дублировать">⧉</button>
+            <button class="chip" data-del="${d.id}" title="Удалить">×</button>
+          </td></tr>`).join('')}</tbody>
+      </table>
+    </div>
+    <span class="muted" style="font-size:12.5px">Любое поле в таблице редактируется прямо здесь — сохраняется по Enter или при уходе из поля.</span>`;
+}
+
+/* ---------- меню недели ---------- */
+function menu() {
+  return `<div class="row" style="gap:18px;align-items:flex-start;flex-wrap:wrap">
+    <div class="palette card" style="gap:10px">
+      <span class="mono">Библиотека · перетащите в слот</span>
+      ${state.s.dishes.map(d => `<div class="item" draggable="true" data-drag="${d.id}">
+        ${NC.tile(d, 'sm')}
+        <span class="col" style="min-width:0"><span class="serif" style="font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${NC.esc(d.name)}</span>
+        <span class="mono" style="font-size:9px">${d.kcal} ккал · ${catLabel(d.cat)}</span></span>
+      </div>`).join('')}
+    </div>
+    <div class="col" style="flex:1;min-width:520px;gap:14px">
+      <div class="row" style="justify-content:space-between">
+        <span class="serif" style="font-size:19px">Сборка недели</span>
+        <div class="row" style="gap:8px">
+          <button class="btn ghost sm" id="autofill">Заполнить автоматически</button>
+        </div>
+      </div>
+      <div class="week">${state.s.week.map(day => `
+        <div class="card col" style="gap:7px;padding:10px">
+          <div class="col" style="gap:1px;padding-bottom:6px;border-bottom:1px solid var(--line)">
+            <span style="font-size:12px">${day.label}</span>
+            <span class="mono" style="font-size:8.5px">${day.menu.totals.kcal ? day.menu.totals.kcal + ' ккал' : 'пусто'}</span>
+          </div>
+          ${day.menu.slots.map(s => `<div class="slot ${s.dish ? 'filled' : ''}" data-drop="${day.date}:${s.cat}">
+            <small>${s.catLabel}</small>${NC.esc(s.dish ? s.dish.name : 'перетащите')}
+          </div>`).join('')}
+        </div>`).join('')}</div>
+      <div class="card row dark" style="background:var(--plum);border:0;gap:12px">
+        <span class="muted" style="flex:1;font-size:12.5px">Замены внутри слота клиент запрашивает до 18:00 — подтверждение на дашборде.</span>
+        <button class="btn light sm" id="publish">Опубликовать неделю</button>
       </div>
     </div>
   </div>`;
 }
 
-function viewProfile() {
-  const c = state.d.client;
-  return `<div class="col fade" style="gap:16px">
-    <span class="serif" style="font-size:22px">История заказов</span>
-    ${(state.d.history || []).map(h => `<div class="card row" style="justify-content:space-between">
-      <span class="col" style="gap:3px"><span class="serif" style="font-size:17px">${NC.esc(h.title)}</span><span class="muted" style="font-size:11px">${NC.esc(h.meta)}</span></span>
-      <span style="font-size:14px">${NC.money(h.sum)}</span></div>`).join('') || '<span class="muted" style="font-size:13px">Пока пусто</span>'}
-    <div class="card col dark" style="gap:10px;background:var(--plum);border:0">
-      <span class="serif" style="font-size:18px;color:var(--champagne)">Продлить подписку</span>
-      <div class="row" style="gap:8px">${state.d.tariffs.map(t => `
-        <button class="chip" data-extend="${t.id}" style="flex:1;flex-direction:column;background:transparent;border-color:rgba(220,192,166,.3);color:var(--champagne);padding:12px 6px">
-          <span class="serif" style="font-size:18px">${t.days} дней</span><span style="font-size:10px">${t.perDay} ${NC.cur}/день</span>
-        </button>`).join('')}</div>
-      <span class="muted" style="font-size:12px;line-height:1.5">Продление тоже проходит через подтверждение — оплата откроется после согласования.</span>
+/* ---------- добавление блюд ---------- */
+function formNew() {
+  const p = parseSmart(state.smart);
+  const found = allergens(state.ing);
+  return `<div class="row" style="gap:8px">
+      ${[['smart', 'Умная строка'], ['bulk', 'Таблица / Excel']].map(([id, label]) => `<button class="chip ${state.form === id ? 'on' : ''}" data-form="${id}">${label}</button>`).join('')}
+      <span class="muted" style="margin-left:auto;font-size:12.5px">${state.form === 'smart' ? 'Быстро для 1–3 блюд подряд' : 'Быстро для цикла на 10 дней'}</span>
+    </div>
+    ${state.form === 'smart' ? `
+    <div class="grid" style="grid-template-columns:1.15fr .85fr;align-items:start">
+      <div class="card col" style="gap:14px">
+        <div class="col" style="gap:4px">
+          <span class="serif" style="font-size:21px">Одна строка → готовое блюдо</span>
+          <span class="muted" style="font-size:12.5px">Название / категория / ккал / Б-Ж-У / вес / цена / теги</span>
+        </div>
+        <textarea id="smart" rows="3" placeholder="Средиземноморский боул / завтрак / 420 ккал / 24-18-32 / 350 г / 18 / веган, без глютена"
+          style="font-family:var(--serif);font-size:19px;line-height:1.4">${NC.esc(state.smart)}</textarea>
+        <div class="row" style="flex-wrap:wrap;gap:7px">
+          ${[['категория', p.cat ? catLabel(p.cat) : ''], ['ккал', p.kcal], ['бжу', p.p ? 'Б' + p.p + ' Ж' + p.f + ' У' + p.c : ''], ['вес', p.weight ? p.weight + ' г' : ''], ['цена', p.price ? p.price + ' ' + NC.cur : '']]
+            .map(([k, v]) => `<span class="chip ${v ? 'on' : ''}" style="cursor:default">${v || k + ' —'}</span>`).join('')}
+          ${p.tags.map(t => `<span class="chip on" style="cursor:default">#${NC.esc(t)}</span>`).join('')}
+        </div>
+        <div class="hr"></div>
+        <span class="mono">Дублировать похожее — заполнит всё, кроме названия</span>
+        <div class="row" style="flex-wrap:wrap;gap:7px">
+          ${state.s.dishes.slice(0, 5).map(d => `<button class="chip" data-clone="${d.id}">⧉ ${NC.esc(d.name.length > 24 ? d.name.slice(0, 22) + '…' : d.name)}</button>`).join('')}
+        </div>
+        <label><span class="mono">Состав и аллергены</span>
+          <input id="ing" value="${NC.esc(state.ing)}" placeholder="булгур, нут, томаты черри, оливки, огурец"></label>
+        <span style="font-size:11.5px">${found.length ? 'Аллергены найдены: ' + found.join(', ') : 'Аллергенов в составе не найдено'}</span>
+        <label><span class="mono">Описание для клиента</span>
+          <textarea id="desc" rows="2" placeholder="Тёплый булгур, хрустящий нут и овощи с лимонной заправкой…"></textarea></label>
+        <label><span class="mono">Почему это блюдо сегодня</span>
+          <textarea id="why" rows="2" placeholder="Лёгкий старт дня перед плотным обедом."></textarea></label>
+        <label><span class="mono">Файл фото (положите в public/img и укажите имя)</span>
+          <input id="img" placeholder="food-boul.jpg"></label>
+        <button class="btn" id="save-smart">Сохранить и следующее</button>
+      </div>
+      <div class="card col dark" style="background:var(--plum);border:0;gap:16px">
+        <span class="mono" style="color:rgba(220,192,166,.6)">Как увидит клиент</span>
+        <div class="card row" style="gap:14px;background:var(--silk);border:0">
+          <div class="tile"></div>
+          <div class="col" style="gap:5px;min-width:0">
+            <span class="mono" style="font-size:9px">${p.cat ? catLabel(p.cat) : 'категория не указана'}</span>
+            <span class="serif" style="font-size:20px;line-height:1.15">${NC.esc(p.name || 'Название блюда')}</span>
+            <span class="muted" style="font-size:11.5px">${p.kcal || 0} ккал · Б${p.p || 0} Ж${p.f || 0} У${p.c || 0}</span>
+          </div>
+        </div>
+        ${[['Вес порции', (p.weight || 0) + ' г'], ['Цена', (p.price || 0) + ' ' + NC.cur], ['Теги', p.tags.join(', ') || '—'], ['Состав', state.ing || '—'], ['Аллергены', found.join(', ') || 'нет']]
+          .map(([k, v]) => `<div class="row" style="justify-content:space-between;gap:12px;padding-bottom:8px;border-bottom:1px solid rgba(220,192,166,.14);font-size:12.5px">
+            <span class="muted">${k}</span><span style="color:var(--champagne);text-align:right">${NC.esc(v)}</span></div>`).join('')}
+      </div>
+    </div>` : `
+    <div class="card col" style="gap:12px">
+      <div class="col" style="gap:4px">
+        <span class="serif" style="font-size:21px">Таблица массового ввода</span>
+        <span class="muted" style="font-size:12.5px">Вставьте диапазон из Excel (Ctrl+V). Колонки: название; категория; ккал; Б; Ж; У; вес; цена; теги; состав</span>
+      </div>
+      <textarea id="bulk" rows="10" placeholder="Шакшука с зелёным перцем; завтрак; 410; 22; 24; 22; 320; 18; вег; яйцо, перец, томаты"
+        style="font-family:var(--mono);font-size:12.5px;line-height:1.7">${NC.esc(state.bulk)}</textarea>
+      <div class="row" style="gap:10px">
+        <button class="btn ghost sm" id="bulk-demo">Вставить пример</button>
+        <span class="muted" style="margin-left:auto;font-size:12.5px">${parseTableCount(state.bulk)} строк готовы к импорту</span>
+        <button class="btn" id="save-bulk">Импортировать всё</button>
+      </div>
+    </div>`}`;
+}
+
+/* ---------- тарифы, клиенты, заказы, контент ---------- */
+function plans() {
+  return `<div class="grid" style="grid-template-columns:repeat(3,minmax(0,1fr))">${state.s.tariffs.map(t => `
+    <div class="card col" style="gap:14px">
+      <span class="mono">${NC.esc(t.code)}</span>
+      <input data-tariff="${t.id}:name" value="${NC.esc(t.name)}" style="border:0;padding:0;background:transparent;font-family:var(--serif);font-size:26px">
+      ${[['perDay', 'Цена за день'], ['days', 'Дней'], ['meals', 'Приёмов пищи в день']].map(([f, label]) => `
+        <label style="flex-direction:row;justify-content:space-between;align-items:center"><span class="muted" style="font-size:12.5px">${label}</span>
+          <input data-tariff="${t.id}:${f}" value="${t[f]}" style="width:88px;text-align:right;font-family:var(--mono);font-size:12px"></label>`).join('')}
+      <div class="row" style="justify-content:space-between;align-items:baseline;padding-top:14px;border-top:1px solid var(--gold);margin-top:auto">
+        <span class="mono">Итого</span><span class="serif" style="font-size:24px">${NC.money(t.perDay * t.days)}</span>
+      </div>
+    </div>`).join('')}</div>`;
+}
+
+function clients() {
+  if (state.dossier) return dossierView();
+  const list = state.s.clients.filter(c => !state.q || (c.name + c.phone).toLowerCase().includes(state.q));
+  return `<div class="card" style="padding:0;overflow:hidden"><table>
+    <thead><tr><th>Клиент</th><th>Тариф</th><th>Осталось</th><th>Статус</th><th>Особенности</th><th></th></tr></thead>
+    <tbody>${list.map(c => `<tr>
+      <td><div class="col" style="gap:2px"><span>${NC.esc(c.name)}</span><span class="muted" style="font-size:11px">${NC.esc(c.phone)}</span></div></td>
+      <td>NC · ${c.planDays}</td>
+      <td><input data-client="${c.id}:daysLeft" value="${c.daysLeft}" style="width:52px;border:0;background:transparent;padding:0;font-family:var(--mono);font-size:12px"> дн.</td>
+      <td><span class="badge">${c.paused ? 'Пауза' : c.daysLeft > 0 ? 'Активен' : 'Завершён'}</span></td>
+      <td><input data-client="${c.id}:notes" value="${NC.esc(c.notes || '')}" style="border:0;background:transparent;padding:0;font-size:12.5px"></td>
+      <td style="text-align:right;white-space:nowrap"><button class="chip" data-dossier="${c.id}">Личное дело</button></td>
+    </tr>`).join('')}</tbody></table></div>`;
+}
+
+
+/* ---------- личное дело клиента ---------- */
+function dossierView() {
+  const d = state.dossier;
+  if (d === 'loading' || !d.client) return '<div class="card">Загружаем личное дело…</div>';
+  const c = d.client, p = d.profile;
+  const tags = (list, cls) => (list && list.length)
+    ? list.map(x => `<span class="tag ${cls || ''}">${NC.esc(x)}</span>`).join('')
+    : '<span class="muted" style="font-size:12.5px">—</span>';
+  const kv = (rows) => `<div class="kv">${rows.filter(r => r[1]).map(([k, v]) =>
+    `<div><span class="muted">${k}</span><b>${NC.esc(String(v))}</b></div>`).join('')}</div>`;
+
+  return `<div class="row" style="gap:10px;flex-wrap:wrap">
+      <button class="chip" id="dossier-back">‹ ко всем клиентам</button>
+      <span class="serif" style="font-size:26px;margin-left:6px">${NC.esc(c.kitchen)}</span>
+      <span class="badge" style="margin-left:auto">${c.paused ? 'Пауза' : c.daysLeft > 0 ? 'Активен' : 'Завершён'}</span>
+    </div>
+
+    <div class="dossier">
+      <div class="col" style="gap:14px">
+        <div class="ph" style="${c.photo ? `background-image:url('/img/${NC.esc(c.photo)}')` : ''}">
+          ${c.photo ? '' : '<span class="mono" style="text-align:center;line-height:2">ФОТО<br>по желанию</span>'}
+        </div>
+        <label><span class="mono">Файл фото в public/img</span>
+          <input data-client="${c.id}:photo" value="${NC.esc(c.photo || '')}" placeholder="nino.jpg"></label>
+
+        <div class="card col" style="gap:10px">
+          <span class="mono">Сообщение от шефа на сегодня</span>
+          <textarea id="chef-note" rows="4" placeholder="Доброе утро 🤍&#10;Сегодня у вас томатный суп с лососем…">${NC.esc(d.chefNote && d.chefNote.text || '')}</textarea>
+          <button class="btn sm" id="save-chef">Отправить в кабинет</button>
+          <span class="muted" style="font-size:11.5px;line-height:1.5">Клиент увидит его на вкладке «Сегодня». Сообщение показывается только в день отправки.</span>
+        </div>
+      </div>
+
+      <div class="col" style="gap:14px">
+        <div class="card col" style="gap:12px">
+          <span class="mono">Основное</span>
+          ${kv([['Имя', c.name], ['Телефон', c.phone], ['Адрес', c.address],
+                ['Окно доставки', (state.s.slots.find(x => x.id === c.slot) || {}).label],
+                ['Тариф', 'NC · ' + c.planDays + ' дней'], ['Осталось дней', c.daysLeft],
+                ['Последняя доставка', d.lastDelivery ? NC.dateRu(d.lastDelivery.slice(0, 10)) : ''],
+                ['Вес', p.weight && p.weight + ' кг'], ['Размер порций', p.portion],
+                ['Цель', (p.goals || []).join(', ')]])}
+        </div>
+
+        <div class="grid" style="grid-template-columns:repeat(2,minmax(0,1fr));gap:14px">
+          <div class="card col" style="gap:8px"><span class="mono">Аллергии и медицина</span>
+            ${tags(p.medical, 'warn')}
+            ${p.medicalNote ? `<span style="font-size:12.5px;line-height:1.5">${NC.esc(p.medicalNote)}</span>` : ''}</div>
+          <div class="card col" style="gap:8px"><span class="mono">Никогда не использовать</span>
+            ${p.never ? `<span style="font-size:12.5px;line-height:1.5">${NC.esc(p.never)}</span>` : '<span class="muted" style="font-size:12.5px">—</span>'}
+            ${tags(d.never.map(r => r.dish.name), 'warn')}</div>
+          <div class="card col" style="gap:8px"><span class="mono">Не ест</span>${tags(p.dislikes)}
+            ${p.dislikesNote ? `<span class="muted" style="font-size:12px">${NC.esc(p.dislikesNote)}</span>` : ''}</div>
+          <div class="card col" style="gap:8px"><span class="mono">Любит</span>${tags(p.likes)}
+            ${p.likesNote ? `<span class="muted" style="font-size:12px">${NC.esc(p.likesNote)}</span>` : ''}</div>
+          <div class="card col" style="gap:8px"><span class="mono">Любимые кухни</span>${tags(d.favouriteCuisines.length ? d.favouriteCuisines : [p.cuisine])}</div>
+          <div class="card col" style="gap:8px"><span class="mono">Любимые ингредиенты</span>${tags(d.favouriteIngredients)}</div>
+          <div class="card col" style="gap:8px"><span class="mono">Приоритеты</span>${tags(p.priorities)}</div>
+          <div class="card col" style="gap:8px"><span class="mono">КБЖУ</span>
+            ${p.kbju && p.kbju.on
+              ? kv([['Калории', p.kbju.kcal], ['Белки', p.kbju.p], ['Жиры', p.kbju.f], ['Углеводы', p.kbju.c], ['От специалиста', p.kbju.note]])
+              : '<span class="muted" style="font-size:12.5px">Не считает — норма по умолчанию</span>'}</div>
+        </div>
+
+        <div class="card col" style="gap:10px">
+          <span class="mono">Любимые блюда · ${d.loved.length}</span>
+          ${d.loved.length ? d.loved.map(r => `<div class="row" style="gap:10px">
+            ${NC.tile(r.dish, 'sm')}
+            <span class="col" style="flex:1;gap:2px"><span class="serif" style="font-size:16px">${NC.esc(r.dish.name)}</span>
+            <span class="muted" style="font-size:11px">${'★'.repeat(r.stars)}${r.text ? ' · ' + NC.esc(r.text) : ''}</span></span>
+          </div>`).join('') : '<span class="muted" style="font-size:12.5px">Пока нет оценок</span>'}
+          ${p.favDishes ? `<span style="font-size:12.5px;line-height:1.5">Со слов клиента: ${NC.esc(p.favDishes)}</span>` : ''}
+        </div>
+
+        <div class="card col" style="gap:10px">
+          <span class="mono">Последние оценки</span>
+          ${d.ratings.length ? d.ratings.map(r => `<div class="row" style="justify-content:space-between;gap:12px;font-size:12.5px">
+            <span>${NC.esc(r.dish.name)}</span>
+            <span class="muted">${'★'.repeat(r.stars) || '—'} · ${NC.dateRu(r.date)}</span></div>`).join('')
+            : '<span class="muted" style="font-size:12.5px">—</span>'}
+        </div>
+
+        <div class="grid" style="grid-template-columns:repeat(2,minmax(0,1fr));gap:14px">
+          <div class="card col" style="gap:10px"><span class="mono">История</span>
+            ${(d.history || []).map(h => `<div class="row" style="justify-content:space-between;font-size:12.5px">
+              <span>${NC.esc(h.title)} · ${NC.esc(h.meta)}</span><span>${NC.money(h.sum)}</span></div>`).join('')
+              || '<span class="muted" style="font-size:12.5px">—</span>'}</div>
+          <div class="card col" style="gap:10px"><span class="mono">Последние изменения</span>
+            ${(d.log || []).slice(0, 8).map(l => `<div class="row" style="justify-content:space-between;gap:10px;font-size:12px">
+              <span>${NC.esc(l.text)}</span><span class="muted">${NC.dateRu(l.at.slice(0, 10))}</span></div>`).join('')
+              || '<span class="muted" style="font-size:12.5px">—</span>'}</div>
+        </div>
+
+        <div class="card col" style="gap:10px">
+          <span class="mono">Статистика за ${NC.esc(d.stats.monthLabel)}</span>
+          <div class="stat-grid">${d.stats.items.map(i =>
+            `<div class="stat"><i>${i.icon}</i><b>${i.n}</b><span>${i.label}</span></div>`).join('')}</div>
+        </div>
+
+        ${p.extra ? `<div class="card col" style="gap:8px"><span class="mono">Комментарий клиента</span>
+          <span style="font-size:12.5px;line-height:1.55">${NC.esc(p.extra)}</span></div>` : ''}
+      </div>
+    </div>`;
+}
+
+/* ---------- отзывы ---------- */
+function reviews() {
+  const list = (state.s.ratings || []).filter(r => r.text || r.stars)
+    .sort((a, b) => (b.updatedAt || b.createdAt || '').localeCompare(a.updatedAt || a.createdAt || ''));
+  if (!list.length) return '<div class="card">Пока нет ни одной оценки. Они появятся, когда клиенты начнут оценивать блюда в кабинете.</div>';
+  return `<div class="card" style="padding:0;overflow:hidden"><table>
+    <thead><tr><th>Клиент</th><th>Блюдо</th><th>Оценка</th><th>Отзыв</th><th>Дата</th><th></th></tr></thead>
+    <tbody>${list.map(r => `<tr>
+      <td>${NC.esc(r.clientName)}</td>
+      <td>${NC.esc(r.dishName)}</td>
+      <td style="white-space:nowrap;color:var(--gold-solid)">${'★'.repeat(r.stars)}${r.mark ? ' <span class="badge">' + ({ love: '❤️ любимое', never: '🙅 не готовить', repeat: '🔄 повторить' })[r.mark] + '</span>' : ''}</td>
+      <td style="font-size:12.5px;line-height:1.5">${NC.esc(r.text || '—')}</td>
+      <td class="mono">${NC.dateRu(r.date)}</td>
+      <td style="text-align:right;white-space:nowrap">${r.text
+        ? (r.published
+          ? `<button class="chip on" data-hide="${r.id}">Скрыть с сайта</button>`
+          : `<button class="chip" data-pub="${r.id}">Опубликовать</button>`)
+        : ''}</td>
+    </tr>`).join('')}</tbody></table></div>
+    <span class="muted" style="font-size:12.5px">Опубликованные отзывы показываются каруселью на главной странице.</span>`;
+}
+
+function orders() {
+  const S = { pending: 'На согласовании', approved: 'Подтверждена', paid: 'Оплачена', rejected: 'Отклонена' };
+  return `<div class="card" style="padding:0;overflow:hidden"><table>
+    <thead><tr><th>Заявка</th><th>Клиент</th><th>Рацион</th><th>Адрес</th><th>Сумма</th><th>Статус</th><th></th></tr></thead>
+    <tbody>${state.s.orders.map(o => `<tr>
+      <td class="mono" style="letter-spacing:.05em">${o.id}</td>
+      <td><div class="col" style="gap:2px"><span>${NC.esc(o.name)}</span><span class="muted" style="font-size:11px">${NC.esc(o.phone)}</span></div></td>
+      <td>${o.planDays} дней · ${o.meals} приёма${o.exclude && o.exclude.length ? '<br><span class="muted" style="font-size:11px">без ' + NC.esc(o.exclude.join(', ').toLowerCase()) + '</span>' : ''}</td>
+      <td class="muted">${NC.esc(o.address)}${o.flat ? ', ' + NC.esc(o.flat) : ''}</td>
+      <td>${NC.money(o.sum)}</td>
+      <td><span class="badge">${S[o.status] || o.status}</span></td>
+      <td style="text-align:right;white-space:nowrap">
+        ${o.status === 'pending' ? `<button class="btn sm" data-ok="order:${o.id}">Подтвердить</button> <button class="chip" data-no="order:${o.id}">×</button>` : ''}
+        ${o.status === 'approved' ? `<a class="chip" href="/order.html?order=${o.id}" style="border-bottom:1px solid var(--line)">ссылка на оплату</a>` : ''}
+      </td></tr>`).join('')}</tbody></table></div>`;
+}
+
+function content() {
+  const c = state.s.content;
+  const fields = [['hero_kicker', 'Надзаголовок', 1], ['hero_title', 'Заголовок', 2], ['hero_text', 'Описание', 3], ['hero_cta', 'Кнопка', 1],
+    ['menu_note', 'Подпись к меню дня', 2],
+    ['about_kicker', 'Обо мне — надзаголовок', 1], ['about_title', 'Обо мне — заголовок', 2], ['about_text', 'Обо мне — текст', 4], ['about_sign', 'Обо мне — подпись', 1], ['about_photo', 'Обо мне — файл фото в public/img', 1],
+    ['delivery_title', 'Блок доставки — заголовок', 1], ['delivery_text', 'Блок доставки — текст', 3], ['footer', 'Подвал', 1],
+    ['hero_photos', 'Фото на главном экране — файлы из public/img через запятую', 2],
+    ['social_tg', 'Telegram — ссылка', 1], ['social_ig', 'Instagram — ссылка', 1], ['social_wa', 'WhatsApp — ссылка', 1], ['social_tt', 'TikTok — ссылка', 1]];
+  return `<div class="grid" style="grid-template-columns:1.1fr .9fr">
+    <div class="col" style="gap:14px">
+      ${fields.map(([id, label, rows]) => `<div class="card col" style="gap:10px">
+        <span class="mono">${label}</span>
+        <textarea data-content="${id}" rows="${rows}" style="font-family:var(--serif);font-size:17px;line-height:1.4">${NC.esc(c[id] || '')}</textarea>
+      </div>`).join('')}
+      <button class="btn" id="save-content">Сохранить тексты</button>
+    </div>
+    <div class="card col" style="gap:14px">
+      <span class="mono">Предпросмотр главного баннера</span>
+      <div class="col" style="gap:12px;padding:28px 24px;border-radius:var(--r);background:linear-gradient(160deg,#f7efe6,#efdecc);min-height:230px;justify-content:center">
+        <span class="mono">${NC.esc(c.hero_kicker)}</span>
+        <span class="serif" style="font-size:34px;line-height:1.1">${NC.esc(c.hero_title)}</span>
+        <span style="font-size:13.5px;line-height:1.5;max-width:340px">${NC.esc(c.hero_text)}</span>
+        <span class="btn" style="align-self:flex-start">${NC.esc(c.hero_cta)}</span>
+      </div>
+      <span class="muted" style="font-size:12.5px">Фото главной страницы — файл <b>public/img/food-toast.jpg</b>. Замените файл, чтобы поменять снимок.</span>
     </div>
   </div>`;
 }
 
+/* ---------- утилиты ---------- */
+function parseSmart(text) {
+  const parts = String(text || '').split('/').map(s => s.trim()).filter(Boolean);
+  const out = { name: '', cat: null, kcal: 0, p: 0, f: 0, c: 0, weight: 0, price: 0, tags: [] };
+  parts.forEach((raw, i) => {
+    const low = raw.toLowerCase();
+    if (i === 0) { out.name = raw; return; }
+    const cat = CATS.find(([id, label]) => low.startsWith(label.toLowerCase().slice(0, 5)));
+    if (cat) { out.cat = cat[0]; return; }
+    if (/ккал/.test(low)) { out.kcal = parseInt(low, 10) || 0; return; }
+    const m = raw.match(/^(\d+)\s*[-\/x]\s*(\d+)\s*[-\/x]\s*(\d+)$/);
+    if (m) { out.p = +m[1]; out.f = +m[2]; out.c = +m[3]; return; }
+    if (/\d/.test(low) && /(г|гр|g)$/.test(low)) { out.weight = parseInt(low, 10) || 0; return; }
+    if (/^\d+([.,]\d+)?$/.test(low)) { out.price = parseFloat(low.replace(',', '.')) || 0; return; }
+    out.tags = out.tags.concat(raw.split(',').map(s => s.trim()).filter(Boolean));
+  });
+  return out;
+}
+const ALLERGENS = ['глютен', 'орех', 'миндал', 'молок', 'сыр', 'яйц', 'рыб', 'кунжут', 'соя', 'мед'];
+const allergens = (t) => ALLERGENS.filter(a => String(t || '').toLowerCase().includes(a));
+const parseTableCount = (t) => String(t || '').split(/\r?\n/).filter(l => l.trim()).length;
+
+/* ---------- обработчики ---------- */
 function wire() {
-  const id = state.d.client.id;
-  const pause = $('pause');
-  if (pause) pause.onclick = async () => {
-    try { await NC.api('/api/client/' + id + '/pause', { method: 'POST', body: {} }); NC.toast('Запрос отправлен'); state.d = await NC.api('/api/client/' + id); render(); }
-    catch (e) { NC.toast(e.message); }
-  };
-  document.querySelectorAll('[data-tab-jump]').forEach(b => b.onclick = () => { state.tab = b.dataset.tabJump; render(); });
-  document.querySelectorAll('[data-swap]').forEach(b => b.onclick = async () => {
-    if (!window.__dishes) window.__dishes = (await NC.api('/api/dishes')).dishes;
-    state.swap = { cat: b.dataset.swap, date: b.dataset.date };
+  document.querySelectorAll('[data-dossier]').forEach(b => b.onclick = async () => {
+    state.dossier = 'loading'; render();
+    try { state.dossier = await NC.api('/api/clients/' + b.dataset.dossier + '/dossier'); }
+    catch (e) { NC.toast(e.message); state.dossier = null; }
     render();
   });
-  const cancel = $('swap-cancel');
-  if (cancel) cancel.onclick = () => { state.swap = null; render(); };
-  document.querySelectorAll('[data-pick]').forEach(b => b.onclick = async () => {
+  const dback = $('dossier-back');
+  if (dback) dback.onclick = () => { state.dossier = null; render(); };
+  const chef = $('save-chef');
+  if (chef) chef.onclick = async () => {
+    const id = state.dossier.client.id;
     try {
-      await NC.api('/api/client/' + id + '/swap', { method: 'POST', body: { cat: state.swap.cat, date: state.swap.date, dishId: b.dataset.pick } });
-      state.swap = null; NC.toast('Запрос замены отправлен');
-      state.d = await NC.api('/api/client/' + id); render();
+      await NC.api('/api/clients/' + id + '/chef-note', { method: 'PUT', body: { text: $('chef-note').value } });
+      NC.toast('Сообщение отправлено клиенту');
+      state.dossier = await NC.api('/api/clients/' + id + '/dossier');
+      render();
     } catch (e) { NC.toast(e.message); }
+  };
+  document.querySelectorAll('[data-pub]').forEach(b => b.onclick = async () => {
+    await NC.api('/api/ratings/' + b.dataset.pub + '/publish', { method: 'POST', body: {} });
+    NC.toast('Отзыв опубликован'); reload();
   });
-  document.querySelectorAll('[data-extend]').forEach(b => b.onclick = async () => {
+  document.querySelectorAll('[data-hide]').forEach(b => b.onclick = async () => {
+    await NC.api('/api/ratings/' + b.dataset.hide + '/hide', { method: 'POST', body: {} });
+    NC.toast('Отзыв скрыт'); reload();
+  });
+
+  document.querySelectorAll('[data-cat]').forEach(b => b.onclick = () => { state.cat = b.dataset.cat; render(); });
+  document.querySelectorAll('[data-form]').forEach(b => b.onclick = () => { state.form = b.dataset.form; render(); });
+
+  document.querySelectorAll('[data-ok]').forEach(b => b.onclick = () => decide(b.dataset.ok, 'approve'));
+  document.querySelectorAll('[data-no]').forEach(b => b.onclick = () => decide(b.dataset.no, 'reject'));
+
+  document.querySelectorAll('[data-edit]').forEach(el => {
+    const commit = async () => {
+      const [id, field] = el.dataset.edit.split(':');
+      try { await NC.api('/api/dishes/' + id, { method: 'PUT', body: { [field]: el.value } }); state.s = await NC.api('/api/admin/state'); }
+      catch (e) { NC.toast(e.message); }
+    };
+    el.onchange = commit;
+    el.onkeydown = (e) => { if (e.key === 'Enter') { el.blur(); } };
+  });
+  document.querySelectorAll('[data-dup]').forEach(b => b.onclick = async () => {
+    await NC.api('/api/dishes/' + b.dataset.dup + '/duplicate', { method: 'POST', body: {} }); NC.toast('Блюдо продублировано'); reload();
+  });
+  document.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
+    if (!confirm('Удалить блюдо?')) return;
+    await NC.api('/api/dishes/' + b.dataset.del, { method: 'DELETE' }); reload();
+  });
+
+  /* меню — drag & drop */
+  document.querySelectorAll('[data-drag]').forEach(el => el.ondragstart = (e) => { state.drag = el.dataset.drag; e.dataTransfer.setData('text/plain', el.dataset.drag); });
+  document.querySelectorAll('[data-drop]').forEach(el => {
+    el.ondragover = (e) => { e.preventDefault(); el.classList.add('over'); };
+    el.ondragleave = () => el.classList.remove('over');
+    el.ondrop = async (e) => {
+      e.preventDefault(); el.classList.remove('over');
+      const [date, cat] = el.dataset.drop.split(':');
+      const dishId = e.dataTransfer.getData('text/plain') || state.drag;
+      try { await NC.api('/api/menu', { method: 'PUT', body: { date, cat, dishId } }); reload(); }
+      catch (err) { NC.toast(err.message); }
+    };
+    el.onclick = async () => {
+      const [date, cat] = el.dataset.drop.split(':');
+      if (el.classList.contains('filled') && confirm('Очистить слот?')) {
+        await NC.api('/api/menu', { method: 'PUT', body: { date, cat, dishId: '' } }); reload();
+      }
+    };
+  });
+  const af = $('autofill');
+  if (af) af.onclick = async () => { await NC.api('/api/menu/autofill', { method: 'POST', body: { days: 7 } }); NC.toast('Пустые слоты заполнены'); reload(); };
+  const pub = $('publish');
+  if (pub) pub.onclick = () => NC.toast('Неделя опубликована — клиенты видят обновление');
+
+  /* добавление блюд */
+  const smart = $('smart');
+  if (smart) smart.oninput = () => { state.smart = smart.value; const pos = smart.selectionStart; render(); const s2 = $('smart'); s2.focus(); s2.setSelectionRange(pos, pos); };
+  const ing = $('ing');
+  if (ing) ing.oninput = () => { state.ing = ing.value; };
+  document.querySelectorAll('[data-clone]').forEach(b => b.onclick = () => {
+    const d = state.s.dishes.find(x => x.id === b.dataset.clone);
+    state.smart = 'Новое блюдо / ' + catLabel(d.cat) + ' / ' + d.kcal + ' ккал / ' + d.p + '-' + d.f + '-' + d.c + ' / ' + d.weight + ' г / ' + d.price + (d.tags.length ? ' / ' + d.tags.join(', ') : '');
+    state.ing = d.ing || '';
+    render();
+  });
+  const ss = $('save-smart');
+  if (ss) ss.onclick = async () => {
+    if (!parseSmart(state.smart).name) return NC.toast('Введите хотя бы название');
     try {
-      const r = await NC.api('/api/client/' + id + '/extend', { method: 'POST', body: { tariffId: b.dataset.extend } });
-      location.href = '/order.html?order=' + r.order.id;
+      await NC.api('/api/dishes', { method: 'POST', body: { smart: state.smart, ing: state.ing, img: ($('img') || {}).value || '', desc: ($('desc') || {}).value || '', why: ($('why') || {}).value || '' } });
+      state.smart = ''; state.ing = ''; NC.toast('Блюдо добавлено'); reload();
     } catch (e) { NC.toast(e.message); }
+  };
+  const bulk = $('bulk');
+  if (bulk) bulk.oninput = () => { state.bulk = bulk.value; };
+  const bd = $('bulk-demo');
+  if (bd) bd.onclick = () => {
+    state.bulk = ['Овсяноблин с индейкой; завтрак; 380; 26; 14; 34; 300; 17; ; овсянка, яйцо, индейка',
+      'Чечевичный суп с кориандром; обед; 300; 16; 8; 40; 330; 15; веган; чечевица, морковь, кориандр',
+      'Индейка с булгуром и шпинатом; ужин; 510; 40; 15; 46; 390; 24; ; индейка, булгур, шпинат',
+      'Хумус с морковными палочками; перекус; 190; 7; 9; 20; 150; 9; веган; нут, тахини, морковь'].join('\n');
+    render();
+  };
+  const sb = $('save-bulk');
+  if (sb) sb.onclick = async () => {
+    try {
+      const r = await NC.api('/api/dishes/bulk', { method: 'POST', body: { text: state.bulk } });
+      state.bulk = ''; NC.toast('Импортировано блюд: ' + r.added); state.sec = 'dishes'; reload();
+    } catch (e) { NC.toast(e.message); }
+  };
+
+  /* тарифы, клиенты, контент */
+  document.querySelectorAll('[data-tariff]').forEach(el => el.onchange = async () => {
+    const [id, field] = el.dataset.tariff.split(':');
+    await NC.api('/api/tariffs/' + id, { method: 'PUT', body: { [field]: el.value } }); reload();
   });
+  document.querySelectorAll('[data-client]').forEach(el => el.onchange = async () => {
+    const [id, field] = el.dataset.client.split(':');
+    await NC.api('/api/clients/' + id, { method: 'PUT', body: { [field]: el.value } }); reload();
+  });
+  const sc = $('save-content');
+  if (sc) sc.onclick = async () => {
+    const body = {};
+    document.querySelectorAll('[data-content]').forEach(el => body[el.dataset.content] = el.value);
+    await NC.api('/api/content', { method: 'PUT', body }); NC.toast('Тексты сайта обновлены'); reload();
+  };
 }
 
-load();
+async function decide(key, action) {
+  const [kind, id] = key.split(':');
+  try {
+    await NC.api('/api/' + (kind === 'order' ? 'orders' : 'requests') + '/' + id + '/' + action, { method: 'POST', body: {} });
+    NC.toast(action === 'approve' ? 'Подтверждено' : 'Отклонено');
+    reload();
+  } catch (e) { NC.toast(e.message); }
+}
+
+boot();
 </script>
 </body>
 </html>
