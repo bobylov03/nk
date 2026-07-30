@@ -389,7 +389,8 @@
         "date": "",
         "text": ""
       },
-      "log": []
+      "log": [],
+      "chefComments": []
     },
     {
       "id": "c01",
@@ -474,7 +475,8 @@
         "date": "",
         "text": ""
       },
-      "log": []
+      "log": [],
+      "chefComments": []
     },
     {
       "id": "c02",
@@ -526,7 +528,8 @@
         "date": "",
         "text": ""
       },
-      "log": []
+      "log": [],
+      "chefComments": []
     },
     {
       "id": "c03",
@@ -578,7 +581,8 @@
         "date": "",
         "text": ""
       },
-      "log": []
+      "log": [],
+      "chefComments": []
     }
   ],
   "orders": [

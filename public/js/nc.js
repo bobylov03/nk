@@ -84,12 +84,9 @@ const NC = {
   dateRu(iso, opts) {
     return new Date(iso).toLocaleDateString('ru-RU', opts || { day: 'numeric', month: 'long' });
   },
+  /* размер задаётся переменной --logo-size, чтобы им управляли медиазапросы */
   logo(size) {
-    const s = size || 58;
-    return `<span class="logo"><span class="mark" style="width:${s}px;height:${s}px">
-      <span style="display:flex;flex-direction:column;align-items:center;gap:1px">
-        <b style="font-size:${Math.round(s * 0.41)}px">NC</b>
-        <s style="font-size:${Math.round(s * 0.135)}px">meals</s>
-      </span></span></span>`;
+    return `<span class="logo"${size ? ` style="--logo-size:${size}px"` : ''}>
+      <span class="mark"><span class="stack"><b>NC</b><s>meals</s></span></span></span>`;
   }
 };

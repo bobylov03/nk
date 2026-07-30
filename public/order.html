@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <title>NC meals — оформление рациона</title>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=Jost:wght@300;400;500&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
@@ -279,7 +279,7 @@ function step6() {
     <div class="card q">
       <span class="q-title">Доставка</span>
       <label><span class="mono">Адрес</span><input data-d="address" value="${NC.esc(d.address)}" placeholder="Ваке, ул. Абашидзе 24"></label>
-      <div class="grid" style="grid-template-columns:repeat(3,1fr);gap:10px">
+      <div class="grid g3" style="gap:10px">
         <label><span class="mono">Подъезд</span><input data-d="entrance" value="${NC.esc(d.entrance)}" placeholder="2"></label>
         <label><span class="mono">Этаж</span><input data-d="floor" value="${NC.esc(d.floor)}" placeholder="5"></label>
         <label><span class="mono">Домофон</span><input data-d="intercom" value="${NC.esc(d.intercom)}" placeholder="12К"></label>

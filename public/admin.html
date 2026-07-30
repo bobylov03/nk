@@ -47,7 +47,8 @@
 <script>
 const CATS = [['breakfast', 'Завтрак'], ['lunch', 'Обед'], ['dinner', 'Ужин'], ['snack', 'Перекус']];
 const catLabel = (id) => (CATS.find(c => c[0] === id) || [, '—'])[1];
-const state = { sec: 'dash', s: null, cat: 'all', q: '', form: 'smart', smart: '', ing: '', bulk: '', drag: null };
+const state = {
+  dossier: null, sec: 'dash', s: null, cat: 'all', q: '', form: 'smart', smart: '', ing: '', bulk: '', drag: null };
 const $ = (id) => document.getElementById(id);
 
 $('enter').onclick = async () => {
@@ -79,6 +80,7 @@ const SECTIONS = [
   ['plans', 'Тарифы и цены', () => state.s.tariffs.length],
   ['clients', 'Клиенты', () => state.s.clients.length],
   ['orders', 'Заказы', () => state.s.orders.length],
+  ['reviews', 'Отзывы', () => (state.s.ratings || []).filter(r => r.text && !r.published).length || ''],
   ['content', 'Контент сайта', () => '']
 ];
 const TITLES = {
@@ -89,6 +91,7 @@ const TITLES = {
   plans: ['Тарифы и цены', 'подписки 7 / 14 / 30 дней'],
   clients: ['Клиенты и подписки', 'рационы и остатки дней'],
   orders: ['Заказы и заявки', 'анкета → подтверждение → оплата'],
+  reviews: ['Отзывы о блюдах', 'оценки клиентов и публикация на сайте'],
   content: ['Контент сайта', 'тексты главной страницы']
 };
 
@@ -99,7 +102,7 @@ function render() {
   $('sec-title').textContent = TITLES[state.sec][0];
   $('sec-sub').textContent = TITLES[state.sec][1];
   $('cycle').textContent = 'нужно ' + Math.max(0, 40 - state.s.dishes.length) + ' новых блюд';
-  $('body').innerHTML = ({ dash, dishes, menu, new: formNew, plans, clients, orders, content })[state.sec]();
+  $('body').innerHTML = ({ dash, dishes, menu, new: formNew, plans, clients, orders, reviews, content })[state.sec]();
   wire();
 }
 
@@ -155,7 +158,7 @@ function dishes() {
     </div>
     <div class="card" style="padding:0;overflow:hidden">
       <table>
-        <thead><tr><th style="width:56px">Фото</th><th>Блюдо</th><th>Категория</th><th>КБЖУ</th><th>Вес</th><th>Цена</th><th></th></tr></thead>
+        <thead><tr><th style="width:56px">Фото</th><th>Блюдо</th><th>Категория</th><th>Кухня</th><th>КБЖУ</th><th>Вес</th><th>Цена</th><th></th></tr></thead>
         <tbody>${list.map(d => `<tr>
           <td>${NC.tile(d, 'sm')}</td>
           <td><div class="col" style="gap:3px">
@@ -167,6 +170,7 @@ function dishes() {
           <td><select data-edit="${d.id}:cat" style="border:0;background:transparent;padding:0;font-size:13px">
             ${CATS.map(([id, label]) => `<option value="${id}" ${d.cat === id ? 'selected' : ''}>${label}</option>`).join('')}
           </select></td>
+          <td><input data-edit="${d.id}:cuisine" value="${NC.esc(d.cuisine || '')}" placeholder="домашняя" style="width:104px;border:0;padding:0;background:transparent;font-size:12.5px"></td>
           <td class="mono" style="letter-spacing:.05em;white-space:nowrap">
             <input data-edit="${d.id}:kcal" value="${d.kcal}" style="width:44px;border:0;padding:0;background:transparent;font-family:var(--mono);font-size:12px"> /
             <input data-edit="${d.id}:p" value="${d.p}" style="width:26px;border:0;padding:0;background:transparent;font-family:var(--mono);font-size:12px">·<input data-edit="${d.id}:f" value="${d.f}" style="width:26px;border:0;padding:0;background:transparent;font-family:var(--mono);font-size:12px">·<input data-edit="${d.id}:c" value="${d.c}" style="width:26px;border:0;padding:0;background:transparent;font-family:var(--mono);font-size:12px">
@@ -302,6 +306,7 @@ function plans() {
 }
 
 function clients() {
+  if (state.dossier) return dossierView();
   const list = state.s.clients.filter(c => !state.q || (c.name + c.phone).toLowerCase().includes(state.q));
   return `<div class="card" style="padding:0;overflow:hidden"><table>
     <thead><tr><th>Клиент</th><th>Тариф</th><th>Осталось</th><th>Статус</th><th>Особенности</th><th></th></tr></thead>
@@ -311,8 +316,153 @@ function clients() {
       <td><input data-client="${c.id}:daysLeft" value="${c.daysLeft}" style="width:52px;border:0;background:transparent;padding:0;font-family:var(--mono);font-size:12px"> дн.</td>
       <td><span class="badge">${c.paused ? 'Пауза' : c.daysLeft > 0 ? 'Активен' : 'Завершён'}</span></td>
       <td><input data-client="${c.id}:notes" value="${NC.esc(c.notes || '')}" style="border:0;background:transparent;padding:0;font-size:12.5px"></td>
-      <td style="text-align:right"><a href="/cabinet.html" class="chip" style="border-bottom:1px solid var(--line)">кабинет</a></td>
+      <td style="text-align:right;white-space:nowrap"><button class="chip" data-dossier="${c.id}">Личное дело</button></td>
     </tr>`).join('')}</tbody></table></div>`;
+}
+
+
+/* ---------- личное дело клиента ---------- */
+function dossierView() {
+  const d = state.dossier;
+  if (d === 'loading' || !d.client) return '<div class="card">Загружаем личное дело…</div>';
+  const c = d.client, p = d.profile;
+  const tags = (list, cls) => (list && list.length)
+    ? list.map(x => `<span class="tag ${cls || ''}">${NC.esc(x)}</span>`).join('')
+    : '<span class="muted" style="font-size:12.5px">—</span>';
+  const kv = (rows) => `<div class="kv">${rows.filter(r => r[1]).map(([k, v]) =>
+    `<div><span class="muted">${k}</span><b>${NC.esc(String(v))}</b></div>`).join('')}</div>`;
+
+  return `<div class="row" style="gap:10px;flex-wrap:wrap">
+      <button class="chip" id="dossier-back">‹ ко всем клиентам</button>
+      <span class="serif" style="font-size:26px;margin-left:6px">${NC.esc(c.kitchen)}</span>
+      <span class="badge" style="margin-left:auto">${c.paused ? 'Пауза' : c.daysLeft > 0 ? 'Активен' : 'Завершён'}</span>
+    </div>
+
+    <div class="dossier">
+      <div class="col" style="gap:14px">
+        <div class="ph" style="${c.photo ? `background-image:url('/img/${NC.esc(c.photo)}')` : ''}">
+          ${c.photo ? '' : '<span class="mono" style="text-align:center;line-height:2">ФОТО<br>по желанию</span>'}
+        </div>
+        <label><span class="mono">Файл фото в public/img</span>
+          <input data-client="${c.id}:photo" value="${NC.esc(c.photo || '')}" placeholder="nino.jpg"></label>
+
+        <div class="card col" style="gap:10px">
+          <span class="mono">Сообщение от шефа на сегодня</span>
+          <textarea id="chef-note" rows="4" placeholder="Доброе утро 🤍&#10;Сегодня у вас томатный суп с лососем…">${NC.esc(d.chefNote && d.chefNote.text || '')}</textarea>
+          <button class="btn sm" id="save-chef">Отправить в кабинет</button>
+          <span class="muted" style="font-size:11.5px;line-height:1.5">Клиент увидит его на вкладке «Сегодня». Сообщение показывается только в день отправки.</span>
+        </div>
+      </div>
+
+      <div class="col" style="gap:14px">
+        <div class="card col" style="gap:12px">
+          <span class="mono">Основное</span>
+          ${kv([['Имя', c.name], ['Телефон', c.phone], ['Адрес', c.address],
+                ['Окно доставки', (state.s.slots.find(x => x.id === c.slot) || {}).label],
+                ['Тариф', 'NC · ' + c.planDays + ' дней'], ['Осталось дней', c.daysLeft],
+                ['Последняя доставка', d.lastDelivery ? NC.dateRu(d.lastDelivery.slice(0, 10)) : ''],
+                ['Вес', p.weight && p.weight + ' кг'], ['Размер порций', p.portion],
+                ['Цель', (p.goals || []).join(', ')]])}
+        </div>
+
+        <div class="grid" style="grid-template-columns:repeat(2,minmax(0,1fr));gap:14px">
+          <div class="card col" style="gap:8px"><span class="mono">Аллергии и медицина</span>
+            ${tags(p.medical, 'warn')}
+            ${p.medicalNote ? `<span style="font-size:12.5px;line-height:1.5">${NC.esc(p.medicalNote)}</span>` : ''}</div>
+          <div class="card col" style="gap:8px"><span class="mono">Никогда не использовать</span>
+            ${p.never ? `<span style="font-size:12.5px;line-height:1.5">${NC.esc(p.never)}</span>` : '<span class="muted" style="font-size:12.5px">—</span>'}
+            ${tags(d.never.map(r => r.dish.name), 'warn')}</div>
+          <div class="card col" style="gap:8px"><span class="mono">Не ест</span>${tags(p.dislikes)}
+            ${p.dislikesNote ? `<span class="muted" style="font-size:12px">${NC.esc(p.dislikesNote)}</span>` : ''}</div>
+          <div class="card col" style="gap:8px"><span class="mono">Любит</span>${tags(p.likes)}
+            ${p.likesNote ? `<span class="muted" style="font-size:12px">${NC.esc(p.likesNote)}</span>` : ''}</div>
+          <div class="card col" style="gap:8px"><span class="mono">Любимые кухни</span>${tags(d.favouriteCuisines.length ? d.favouriteCuisines : [p.cuisine])}</div>
+          <div class="card col" style="gap:8px"><span class="mono">Любимые ингредиенты</span>${tags(d.favouriteIngredients)}</div>
+          <div class="card col" style="gap:8px"><span class="mono">Приоритеты</span>${tags(p.priorities)}</div>
+          <div class="card col" style="gap:8px"><span class="mono">КБЖУ</span>
+            ${p.kbju && p.kbju.on
+              ? kv([['Калории', p.kbju.kcal], ['Белки', p.kbju.p], ['Жиры', p.kbju.f], ['Углеводы', p.kbju.c], ['От специалиста', p.kbju.note]])
+              : '<span class="muted" style="font-size:12.5px">Не считает — норма по умолчанию</span>'}</div>
+        </div>
+
+        <div class="card col" style="gap:10px">
+          <span class="mono">Любимые блюда · ${d.loved.length}</span>
+          ${d.loved.length ? d.loved.map(r => `<div class="row" style="gap:10px">
+            ${NC.tile(r.dish, 'sm')}
+            <span class="col" style="flex:1;gap:2px"><span class="serif" style="font-size:16px">${NC.esc(r.dish.name)}</span>
+            <span class="muted" style="font-size:11px">${'★'.repeat(r.stars)}${r.text ? ' · ' + NC.esc(r.text) : ''}</span></span>
+          </div>`).join('') : '<span class="muted" style="font-size:12.5px">Пока нет оценок</span>'}
+          ${p.favDishes ? `<span style="font-size:12.5px;line-height:1.5">Со слов клиента: ${NC.esc(p.favDishes)}</span>` : ''}
+        </div>
+
+        <div class="card col" style="gap:10px">
+          <span class="mono">Последние оценки</span>
+          ${d.ratings.length ? d.ratings.map(r => `<div class="row" style="justify-content:space-between;gap:12px;font-size:12.5px">
+            <span>${NC.esc(r.dish.name)}</span>
+            <span class="muted">${'★'.repeat(r.stars) || '—'} · ${NC.dateRu(r.date)}</span></div>`).join('')
+            : '<span class="muted" style="font-size:12.5px">—</span>'}
+        </div>
+
+        <div class="grid" style="grid-template-columns:repeat(2,minmax(0,1fr));gap:14px">
+          <div class="card col" style="gap:10px"><span class="mono">История</span>
+            ${(d.history || []).map(h => `<div class="row" style="justify-content:space-between;font-size:12.5px">
+              <span>${NC.esc(h.title)} · ${NC.esc(h.meta)}</span><span>${NC.money(h.sum)}</span></div>`).join('')
+              || '<span class="muted" style="font-size:12.5px">—</span>'}</div>
+          <div class="card col" style="gap:10px"><span class="mono">Последние изменения</span>
+            ${(d.log || []).slice(0, 8).map(l => `<div class="row" style="justify-content:space-between;gap:10px;font-size:12px">
+              <span>${NC.esc(l.text)}</span><span class="muted">${NC.dateRu(l.at.slice(0, 10))}</span></div>`).join('')
+              || '<span class="muted" style="font-size:12.5px">—</span>'}</div>
+        </div>
+
+        <div class="card col" style="gap:10px">
+          <span class="mono">Комментарии шефа · только для вас</span>
+          <span class="muted" style="font-size:11.5px;line-height:1.5">Приватные заметки о клиенте. Клиент их не видит — в отличие от сообщения слева.</span>
+          <div class="row" style="gap:8px;align-items:flex-start">
+            <textarea id="chef-comment" rows="2" placeholder="Например: просила меньше соли, звонить перед доставкой"></textarea>
+            <button class="btn sm" id="add-comment" style="white-space:nowrap">Добавить</button>
+          </div>
+          ${(d.chefComments || []).length ? (d.chefComments || []).map(cm => `
+            <div class="row" style="gap:10px;align-items:flex-start;padding-top:9px;border-top:1px solid var(--line)">
+              <span class="col" style="flex:1;gap:3px">
+                <span style="font-size:12.5px;line-height:1.5">${NC.esc(cm.text)}</span>
+                <span class="mono" style="font-size:9px">${NC.dateRu(cm.at.slice(0, 10))}</span>
+              </span>
+              <button class="chip" data-delcomment="${cm.id}" title="Удалить">×</button>
+            </div>`).join('') : '<span class="muted" style="font-size:12.5px">Пока нет заметок</span>'}
+        </div>
+
+        <div class="card col" style="gap:10px">
+          <span class="mono">Статистика за ${NC.esc(d.stats.monthLabel)}</span>
+          <div class="stat-grid">${d.stats.items.map(i =>
+            `<div class="stat"><i>${i.icon}</i><b>${i.n}</b><span>${i.label}</span></div>`).join('')}</div>
+        </div>
+
+        ${p.extra ? `<div class="card col" style="gap:8px"><span class="mono">Комментарий клиента</span>
+          <span style="font-size:12.5px;line-height:1.55">${NC.esc(p.extra)}</span></div>` : ''}
+      </div>
+    </div>`;
+}
+
+/* ---------- отзывы ---------- */
+function reviews() {
+  const list = (state.s.ratings || []).filter(r => r.text || r.stars)
+    .sort((a, b) => (b.updatedAt || b.createdAt || '').localeCompare(a.updatedAt || a.createdAt || ''));
+  if (!list.length) return '<div class="card">Пока нет ни одной оценки. Они появятся, когда клиенты начнут оценивать блюда в кабинете.</div>';
+  return `<div class="card" style="padding:0;overflow:hidden"><table>
+    <thead><tr><th>Клиент</th><th>Блюдо</th><th>Оценка</th><th>Отзыв</th><th>Дата</th><th></th></tr></thead>
+    <tbody>${list.map(r => `<tr>
+      <td>${NC.esc(r.clientName)}</td>
+      <td>${NC.esc(r.dishName)}</td>
+      <td style="white-space:nowrap;color:var(--gold-solid)">${'★'.repeat(r.stars)}${r.mark ? ' <span class="badge">' + ({ love: '❤️ любимое', never: '🙅 не готовить', repeat: '🔄 повторить' })[r.mark] + '</span>' : ''}</td>
+      <td style="font-size:12.5px;line-height:1.5">${NC.esc(r.text || '—')}</td>
+      <td class="mono">${NC.dateRu(r.date)}</td>
+      <td style="text-align:right;white-space:nowrap">${r.text
+        ? (r.published
+          ? `<button class="chip on" data-hide="${r.id}">Скрыть с сайта</button>`
+          : `<button class="chip" data-pub="${r.id}">Опубликовать</button>`)
+        : ''}</td>
+    </tr>`).join('')}</tbody></table></div>
+    <span class="muted" style="font-size:12.5px">Опубликованные отзывы показываются каруселью на главной странице.</span>`;
 }
 
 function orders() {
@@ -337,7 +487,9 @@ function content() {
   const fields = [['hero_kicker', 'Надзаголовок', 1], ['hero_title', 'Заголовок', 2], ['hero_text', 'Описание', 3], ['hero_cta', 'Кнопка', 1],
     ['menu_note', 'Подпись к меню дня', 2],
     ['about_kicker', 'Обо мне — надзаголовок', 1], ['about_title', 'Обо мне — заголовок', 2], ['about_text', 'Обо мне — текст', 4], ['about_sign', 'Обо мне — подпись', 1], ['about_photo', 'Обо мне — файл фото в public/img', 1],
-    ['delivery_title', 'Блок доставки — заголовок', 1], ['delivery_text', 'Блок доставки — текст', 3], ['footer', 'Подвал', 1]];
+    ['delivery_title', 'Блок доставки — заголовок', 1], ['delivery_text', 'Блок доставки — текст', 3], ['footer', 'Подвал', 1],
+    ['hero_photos', 'Фото на главном экране — файлы из public/img через запятую', 2],
+    ['social_tg', 'Telegram — ссылка', 1], ['social_ig', 'Instagram — ссылка', 1], ['social_wa', 'WhatsApp — ссылка', 1], ['social_tt', 'TikTok — ссылка', 1]];
   return `<div class="grid" style="grid-template-columns:1.1fr .9fr">
     <div class="col" style="gap:14px">
       ${fields.map(([id, label, rows]) => `<div class="card col" style="gap:10px">
@@ -383,6 +535,49 @@ const parseTableCount = (t) => String(t || '').split(/\r?\n/).filter(l => l.trim
 
 /* ---------- обработчики ---------- */
 function wire() {
+  document.querySelectorAll('[data-dossier]').forEach(b => b.onclick = async () => {
+    state.dossier = 'loading'; render();
+    try { state.dossier = await NC.api('/api/clients/' + b.dataset.dossier + '/dossier'); }
+    catch (e) { NC.toast(e.message); state.dossier = null; }
+    render();
+  });
+  const dback = $('dossier-back');
+  if (dback) dback.onclick = () => { state.dossier = null; render(); };
+  const chef = $('save-chef');
+  if (chef) chef.onclick = async () => {
+    const id = state.dossier.client.id;
+    try {
+      await NC.api('/api/clients/' + id + '/chef-note', { method: 'PUT', body: { text: $('chef-note').value } });
+      NC.toast('Сообщение отправлено клиенту');
+      state.dossier = await NC.api('/api/clients/' + id + '/dossier');
+      render();
+    } catch (e) { NC.toast(e.message); }
+  };
+  const addc = $('add-comment');
+  if (addc) addc.onclick = async () => {
+    const id = state.dossier.client.id, ta = $('chef-comment');
+    if (!ta.value.trim()) return NC.toast('Введите комментарий');
+    try {
+      await NC.api('/api/clients/' + id + '/comment', { method: 'POST', body: { text: ta.value } });
+      state.dossier = await NC.api('/api/clients/' + id + '/dossier');
+      NC.toast('Заметка сохранена'); render();
+    } catch (e) { NC.toast(e.message); }
+  };
+  document.querySelectorAll('[data-delcomment]').forEach(b => b.onclick = async () => {
+    const id = state.dossier.client.id;
+    await NC.api('/api/clients/' + id + '/comment/' + b.dataset.delcomment, { method: 'DELETE' });
+    state.dossier = await NC.api('/api/clients/' + id + '/dossier');
+    render();
+  });
+  document.querySelectorAll('[data-pub]').forEach(b => b.onclick = async () => {
+    await NC.api('/api/ratings/' + b.dataset.pub + '/publish', { method: 'POST', body: {} });
+    NC.toast('Отзыв опубликован'); reload();
+  });
+  document.querySelectorAll('[data-hide]').forEach(b => b.onclick = async () => {
+    await NC.api('/api/ratings/' + b.dataset.hide + '/hide', { method: 'POST', body: {} });
+    NC.toast('Отзыв скрыт'); reload();
+  });
+
   document.querySelectorAll('[data-cat]').forEach(b => b.onclick = () => { state.cat = b.dataset.cat; render(); });
   document.querySelectorAll('[data-form]').forEach(b => b.onclick = () => { state.form = b.dataset.form; render(); });
 
