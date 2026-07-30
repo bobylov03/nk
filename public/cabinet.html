@@ -271,7 +271,11 @@ function viewStats() {
       <div class="${[d.active ? 'active' : '', d.paused ? 'paused' : '', d.date === state.d.today.date ? 'today' : ''].join(' ')}">
         <span>${d.day}</span><i></i>
       </div>`).join('')}</div>
-    <div class="row muted" style="gap:16px;font-size:11px"><span>● доставка</span><span>● пауза</span><span>○ вне рациона</span></div>
+    <div class="cal-legend">
+      <span><i class="m-active"></i>доставка</span>
+      <span><i class="m-paused"></i>пауза</span>
+      <span><i class="m-off"></i>вне рациона</span>
+    </div>
 
     <span class="serif" style="font-size:22px">История заказов</span>
     ${(state.d.history || []).map(h => `<div class="card row" style="justify-content:space-between">

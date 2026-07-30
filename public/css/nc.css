@@ -133,9 +133,20 @@ td{padding:11px 10px;border-top:1px solid var(--line);font-size:13px;vertical-al
 .cal div{aspect-ratio:1;border-radius:12px;border:1px solid var(--line);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:12px}
 .cal div.active{background:rgba(74,36,61,.08)}
 .cal div.today{border-color:var(--plum)}
-.cal div i{width:4px;height:4px;border-radius:50%;background:transparent}
+.cal div i{width:6px;height:6px;border-radius:50%;background:transparent;position:relative;box-sizing:border-box}
 .cal div.active i{background:var(--plum)}
-.cal div.paused i{background:rgba(74,36,61,.35)}
+/* пауза — точка внутри кольца, чтобы не путалась с доставкой */
+.cal div.paused i{width:11px;height:11px;background:transparent;border:1px solid var(--plum)}
+.cal div.paused i::after{content:'';position:absolute;inset:2.5px;border-radius:50%;background:var(--plum)}
+
+/* легенда календаря — те же маркеры, что в сетке */
+.cal-legend{display:flex;flex-wrap:wrap;gap:16px;align-items:center;font-size:11px;color:var(--muted)}
+.cal-legend span{display:inline-flex;align-items:center;gap:7px}
+.cal-legend i{display:block;border-radius:50%;box-sizing:border-box;flex:0 0 auto;position:relative}
+.cal-legend .m-active{width:7px;height:7px;background:var(--plum)}
+.cal-legend .m-paused{width:11px;height:11px;border:1px solid var(--plum)}
+.cal-legend .m-paused::after{content:'';position:absolute;inset:2.5px;border-radius:50%;background:var(--plum)}
+.cal-legend .m-off{width:11px;height:11px;border:1px solid rgba(74,36,61,.3)}
 
 /* админка */
 .admin{display:flex;min-height:100vh}
