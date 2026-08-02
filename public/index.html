@@ -10,19 +10,20 @@
 </head>
 <body>
 
-<div class="nav">
+<div class="nav" id="nav">
   <a href="/" style="border:0" id="logo"></a>
-  <nav>
+  <nav id="nav-menu">
     <a href="#menu" style="border:0">Меню дня</a>
     <a href="#how" style="border:0">Как это работает</a>
     <a href="#tariffs" style="border:0">Тарифы</a>
     <a href="#delivery" style="border:0">Доставка</a>
-    <a href="/cabinet.html" class="only-mobile" style="border:0">Кабинет</a>
+    <a href="/cabinet.html" class="only-mobile" style="border:0">Личный кабинет</a>
   </nav>
   <div class="row" style="gap:10px">
     <a class="btn ghost sm" href="/cabinet.html" style="border-bottom:1px solid rgba(74,36,61,.28)">Личный кабинет</a>
     <a class="btn sm" href="/order.html" style="border:0">Оформить рацион</a>
   </div>
+  <button class="burger" id="burger" aria-label="Меню" aria-expanded="false" aria-controls="nav-menu"><i></i></button>
 </div>
 
 <div class="hero">
@@ -101,6 +102,25 @@
 <script src="/js/nc.js"></script>
 <script src="/js/dish-sheet.js"></script>
 <script>
+/* высота шапки → отступ для якорей, чтобы заголовок не уезжал под неё */
+(function () {
+  const nav = document.getElementById('nav'), burger = document.getElementById('burger'), menu = document.getElementById('nav-menu');
+  const setH = () => document.documentElement.style.setProperty('--nav-h', (nav.offsetHeight + 14) + 'px');
+  setH();
+  addEventListener('resize', setH);
+  if (window.ResizeObserver) new ResizeObserver(setH).observe(nav);
+
+  const close = () => { nav.classList.remove('open'); burger.setAttribute('aria-expanded', 'false'); };
+  burger.onclick = () => {
+    const open = !nav.classList.contains('open');
+    nav.classList.toggle('open', open);
+    burger.setAttribute('aria-expanded', String(open));
+  };
+  menu.querySelectorAll('a').forEach(a => a.onclick = close);
+  addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
+  document.addEventListener('click', e => { if (!nav.contains(e.target)) close(); });
+})();
+
 (async function () {
   document.getElementById('logo').innerHTML = NC.logo();
   const data = await NC.api('/api/public');

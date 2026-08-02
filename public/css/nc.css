@@ -18,6 +18,9 @@
   --mono:'JetBrains Mono',ui-monospace,monospace;
 }
 *{box-sizing:border-box}
+html{scroll-behavior:smooth}
+:target{scroll-margin-top:var(--nav-h,96px)}
+#menu,#how,#tariffs,#delivery,#about,#reviews,.section,.about{scroll-margin-top:var(--nav-h,96px)}
 body{margin:0;background:var(--bg);color:var(--plum);font-family:var(--sans);-webkit-font-smoothing:antialiased;overflow-x:clip}
 a{color:var(--plum);text-decoration:none;border-bottom:1px solid rgba(74,36,61,.35)}
 a:hover{opacity:.7}
@@ -81,6 +84,15 @@ td{padding:11px 10px;border-top:1px solid var(--line);font-size:13px;vertical-al
 .nav{position:sticky;top:0;z-index:5;flex-wrap:wrap;display:flex;align-items:center;justify-content:space-between;gap:24px;
   padding:14px 40px;background:rgba(246,235,221,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
 .nav nav{display:flex;gap:30px;font-size:17px;white-space:nowrap}
+.burger{display:none;width:44px;height:44px;flex:0 0 auto;align-items:center;justify-content:center;
+  border:1px solid rgba(74,36,61,.22);border-radius:50%;background:transparent;cursor:pointer;padding:0}
+.burger i{display:block;position:relative;width:17px;height:1.5px;background:var(--plum);border-radius:2px;transition:.22s}
+.burger i::before,.burger i::after{content:'';position:absolute;left:0;width:17px;height:1.5px;background:var(--plum);border-radius:2px;transition:.22s}
+.burger i::before{top:-5.5px}
+.burger i::after{top:5.5px}
+.nav.open .burger i{background:transparent}
+.nav.open .burger i::before{top:0;transform:rotate(45deg)}
+.nav.open .burger i::after{top:0;transform:rotate(-45deg)}
 .nav .btn{font-size:12.5px;padding:14px 26px;letter-spacing:.13em}
 .hero{background:linear-gradient(160deg,#fbf6ef,#f2e5d6);padding:80px 40px;display:grid;grid-template-columns:1.05fr .95fr;gap:48px;align-items:center}
 .hero h1{font-size:clamp(32px,6.2vw,54px);max-width:15em;text-wrap:pretty}
@@ -185,13 +197,20 @@ td{padding:11px 10px;border-top:1px solid var(--line);font-size:13px;vertical-al
   #tariff-grid{grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
 }
 @media (max-width:760px){
-  .nav{padding:12px 16px;gap:12px}
-  .nav #logo{order:1}
-  .nav > .row{order:2;margin-left:auto}
-  .nav nav{order:3;width:100%;gap:20px;font-size:14px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
-  .nav nav::-webkit-scrollbar{display:none}
-  .nav .btn{padding:10px 15px;font-size:10px;letter-spacing:.1em}
+  .nav{--nav-h:70px;padding:11px 16px;gap:10px;flex-wrap:nowrap}
   .nav .logo{--logo-size:46px}
+  .burger{display:flex;order:3}
+  .nav > .row{order:2;margin-left:auto;gap:8px}
+  .nav .btn{padding:10px 14px;font-size:10px;letter-spacing:.1em}
+
+  /* выпадающая панель */
+  .nav nav{order:4;position:absolute;top:100%;left:0;right:0;flex-direction:column;gap:0;
+    background:var(--bg);border-bottom:1px solid var(--line);box-shadow:0 18px 40px rgba(74,36,61,.13);
+    max-height:0;overflow:hidden;visibility:hidden;transition:max-height .28s ease,visibility .28s}
+  .nav.open nav{max-height:70vh;overflow:auto;visibility:visible}
+  .nav nav a{padding:15px 20px;font-size:16px;border:0;border-top:1px solid var(--line)}
+  .nav nav a:first-child{border-top:0}
+  .nav nav a:active{background:var(--silk)}
   .hero{padding:44px 20px 52px;gap:32px}
   .hero-photo{width:min(100%,340px)}
   .section{padding:52px 20px;gap:20px}
@@ -205,7 +224,7 @@ td{padding:11px 10px;border-top:1px solid var(--line);font-size:13px;vertical-al
 }
 @media (max-width:560px){
   .nav .btn.ghost{display:none}
-  .only-mobile{display:inline}
+  .only-mobile{display:block}
   #steps{grid-template-columns:1fr}
   .hero h1{font-size:clamp(28px,8vw,42px)}
   .hero-photo{border-radius:24px}
