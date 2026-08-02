@@ -362,3 +362,18 @@ textarea{min-height:82px;resize:vertical;font-family:var(--sans);line-height:1.5
   .ring-in{width:48px;height:48px}
   .ring-in .serif{font-size:20px}
 }
+
+/* выбор типа питания */
+.diets{display:flex;flex-direction:column;gap:8px}
+.diet{display:flex;align-items:flex-start;gap:11px;width:100%;text-align:left;cursor:pointer;
+  padding:12px 13px;border:1px solid var(--line);border-radius:13px;background:#faf3eb;
+  font-family:var(--sans);color:var(--plum);transition:border-color .15s,background .15s}
+.diet .ic{font-size:19px;line-height:1.15;flex:0 0 auto}
+.diet .tx{display:flex;flex-direction:column;gap:3px;flex:1;min-width:0}
+.diet .tx b{font-weight:400;font-size:14.5px;line-height:1.2}
+.diet .tx i{font-style:normal;font-size:12px;line-height:1.45;color:var(--muted)}
+.diet .dot{width:18px;height:18px;border-radius:50%;border:1px solid rgba(74,36,61,.3);flex:0 0 auto;margin-top:2px;position:relative}
+.diet.on{border-color:var(--gold-solid);background:#fff}
+.diet.on .dot{border-color:var(--gold-solid)}
+.diet.on .dot::after{content:'';position:absolute;inset:3.5px;border-radius:50%;background:var(--gold-solid)}
+@media (max-width:560px){.diet{padding:11px}.diet .tx b{font-size:14px}.diet .tx i{font-size:11.5px}}

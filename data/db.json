@@ -382,7 +382,9 @@
         },
         "extra": "",
         "weight": "",
-        "portion": "обычная"
+        "portion": "обычная",
+        "diet": "omnivore",
+        "dietNote": ""
       },
       "photo": "",
       "chefNote": {
@@ -468,7 +470,9 @@
         },
         "extra": "",
         "weight": "58",
-        "portion": "обычная"
+        "portion": "обычная",
+        "diet": "pescatarian",
+        "dietNote": ""
       },
       "photo": "",
       "chefNote": {
@@ -521,7 +525,9 @@
         },
         "extra": "",
         "weight": "",
-        "portion": "обычная"
+        "portion": "обычная",
+        "diet": "omnivore",
+        "dietNote": ""
       },
       "photo": "",
       "chefNote": {
@@ -574,7 +580,9 @@
         },
         "extra": "",
         "weight": "",
-        "portion": "обычная"
+        "portion": "обычная",
+        "diet": "omnivore",
+        "dietNote": ""
       },
       "photo": "",
       "chefNote": {

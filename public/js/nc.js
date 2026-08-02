@@ -49,6 +49,15 @@ const NC = {
       options.map(o => `<button type="button" class="chip ${String(o) === String(value) ? 'on' : ''}" data-val="${NC.esc(o)}">${NC.esc(o)}</button>`).join('') +
       `</div>`;
   },
+  /* список типов питания: иконка, название, пояснение */
+  diets(options, value) {
+    return `<div class="diets" data-diet>` + options.map(d => `
+      <button type="button" class="diet ${d.id === value ? 'on' : ''}" data-val="${d.id}">
+        <span class="ic">${d.icon}</span>
+        <span class="tx"><b>${NC.esc(d.name)}</b><i>${NC.esc(d.desc)}</i></span>
+        <span class="dot"></span>
+      </button>`).join('') + `</div>`;
+  },
   stars(value, dishId, date) {
     return `<div class="stars" data-stars="${dishId}" data-date="${date || ''}">` +
       [1, 2, 3, 4, 5].map(n => `<button type="button" class="${n <= value ? 'on' : ''}" data-n="${n}" aria-label="${n} из 5">★</button>`).join('') +

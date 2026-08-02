@@ -26,7 +26,8 @@ const writeDb = (db) => store().setJSON('db', db);
 function migrate(db) {
   db.ratings = db.ratings || [];
   db.clients = (db.clients || []).map(c => ({
-    photo: '', log: [], chefComments: [], chefNote: { date: '', text: '' }, ...c
+    photo: '', log: [], chefComments: [], chefNote: { date: '', text: '' }, ...c,
+    profile: { diet: 'omnivore', dietNote: '', ...(c.profile || {}) }
   }));
   db.dishes = (db.dishes || []).map(d => ({ cuisine: 'домашняя', ...d }));
   db.content = { ...seed.content, ...db.content };

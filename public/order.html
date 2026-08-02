@@ -34,12 +34,13 @@
 
 <script src="/js/nc.js"></script>
 <script>
-const QSTEPS = 6;                          // разделов анкеты
+const QSTEPS = 7;                          // разделов анкеты
 const state = {
   step: 1, welcome: false, data: null, opts: null, orderId: null, order: null,
   form: {
     tariffId: 't14', name: '', phone: '', flat: '', promo: '', pay: 'card', clientId: null, known: '',
     profile: {
+      diet: 'omnivore', dietNote: '',
       goals: [], medical: [], medicalNote: '', dislikes: [], dislikesNote: '',
       likes: [], likesNote: '', never: '', meals: 4, soups: 'Иногда', cuisine: 'Смешанная',
       favDishes: '', kbju: { on: false, kcal: '', p: '', f: '', c: '', note: '' },
@@ -49,16 +50,17 @@ const state = {
   }
 };
 
-const TITLES = ['Выберите рацион', 'Основная цель', 'Медицинские особенности', 'Вкусы и предпочтения',
+const TITLES = ['Выберите рацион', 'Основная цель', 'Медицинские особенности', 'Тип питания', 'Вкусы и предпочтения',
   'КБЖУ и приоритеты', 'Доставка и контакты', 'Заявка отправлена', 'Оплата рациона', 'Готово'];
 const NOTES = ['Чем длиннее рацион, тем ниже цена дня.',
   'Расскажите, какой результат вы хотите получить. Можно выбрать несколько вариантов.',
   'Очень важный раздел — от него зависит, что попадёт к вам в контейнер.',
+  'Выберите вариант, который ближе всего. Детали уточним на следующем шаге.',
   'Чем подробнее ответите, тем меньше придётся править потом.',
   'Считать ничего не нужно — заполняйте, только если у вас есть конкретные цифры.',
   'Это анкета, оплата не потребуется. Мы свяжемся и подтвердим рацион.',
   '', '', ''];
-const CTA = ['Далее', 'Далее', 'Далее', 'Далее', 'Далее', 'Отправить заявку',
+const CTA = ['Далее', 'Далее', 'Далее', 'Далее', 'Далее', 'Далее', 'Отправить заявку',
   'Проверить статус', 'Оплатить рацион', 'В личный кабинет'];
 
 const $ = (id) => document.getElementById(id);
@@ -74,7 +76,7 @@ async function boot() {
 
   const q = new URLSearchParams(location.search);
   if (q.get('tariff')) state.form.tariffId = q.get('tariff');
-  if (q.get('order')) { state.orderId = q.get('order'); await refresh(); state.step = 7; render(); return; }
+  if (q.get('order')) { state.orderId = q.get('order'); await refresh(); state.step = 8; render(); return; }
 
   // повторный заказ: если человек уже заходил в кабинет — подтягиваем профиль
   const id = NC.clientId();
@@ -104,8 +106,8 @@ async function refresh() {
   if (!state.orderId) return;
   const r = await NC.api('/api/orders/' + state.orderId);
   state.order = r.order;
-  if (state.order.status === 'approved' && state.step === 7) state.step = 8;
-  if (state.order.status === 'paid') state.step = 9;
+  if (state.order.status === 'approved' && state.step === 8) state.step = 9;
+  if (state.order.status === 'paid') state.step = 10;
 }
 
 function render() {
@@ -115,11 +117,11 @@ function render() {
   $('step-note').textContent = NOTES[state.step - 1] || '';
   $('dots').innerHTML = Array.from({ length: QSTEPS }, (_, i) =>
     '<i class="' + (i + 1 <= state.step ? 'on' : '') + '"></i>').join('');
-  $('total-label').textContent = state.step === 8 ? 'К оплате' : 'Стоимость';
+  $('total-label').textContent = state.step === 9 ? 'К оплате' : 'Стоимость';
   $('total').textContent = NC.money(sum());
   $('cta').textContent = CTA[state.step - 1];
   $('back').style.visibility = (state.step === 1 || state.step > QSTEPS) ? 'hidden' : 'visible';
-  $('body').innerHTML = [step1, step2, step3, step4, step5, step6, step7, step8, step9][state.step - 1]();
+  $('body').innerHTML = [step1, step2, step3, step4, step5, step6, step7, step8, step9, step10][state.step - 1]();
   wire();
 }
 
@@ -135,6 +137,7 @@ function renderWelcome() {
   $('cta').textContent = 'Всё верно, к тарифу';
   $('back').style.visibility = 'hidden';
   const rows = [
+    ['Тип питания', dietName(p.diet)],
     ['Цель', p.goals.join(', ')],
     ['Медицинские особенности', p.medical.join(', ')],
     ['Не едите', p.dislikes.join(', ')],
@@ -209,8 +212,23 @@ function step3() {
   </div>`;
 }
 
-/* ---------- 4. вкусы ---------- */
+/* ---------- 4. тип питания ---------- */
 function step4() {
+  return `<div class="col fade" style="gap:14px">
+    <div class="card q">
+      <span class="q-title">Какой тип питания вам ближе?</span>
+      ${NC.diets(state.opts.diets, P().diet)}
+    </div>
+    <div class="card q">
+      <span class="q-title">Уточнения</span>
+      <span class="q-note">Если ваш вариант сложнее списка — опишите словами.</span>
+      <textarea data-p="dietNote" placeholder="Например: пескетарианец, но по выходным ем курицу">${NC.esc(P().dietNote)}</textarea>
+    </div>
+  </div>`;
+}
+
+/* ---------- 5. вкусы ---------- */
+function step5() {
   const o = state.opts;
   return `<div class="col fade" style="gap:14px">
     <div class="card q">
@@ -238,8 +256,8 @@ function step4() {
   </div>`;
 }
 
-/* ---------- 5. КБЖУ и приоритеты ---------- */
-function step5() {
+/* ---------- 6. КБЖУ и приоритеты ---------- */
+function step6() {
   const k = P().kbju;
   return `<div class="col fade" style="gap:14px">
     <div class="card q">
@@ -267,8 +285,8 @@ function step5() {
   </div>`;
 }
 
-/* ---------- 6. доставка и контакты ---------- */
-function step6() {
+/* ---------- 7. доставка и контакты ---------- */
+function step7() {
   const f = state.form, d = P().delivery;
   return `<div class="col fade" style="gap:14px">
     <div class="card q">
@@ -298,8 +316,8 @@ function step6() {
   </div>`;
 }
 
-/* ---------- 7. заявка на согласовании ---------- */
-function step7() {
+/* ---------- 8. заявка на согласовании ---------- */
+function step8() {
   const o = state.order || {};
   const st = { pending: 'на согласовании', approved: 'подтверждена', rejected: 'отклонена', paid: 'оплачена' }[o.status] || '—';
   return `<div class="col fade" style="gap:16px">
@@ -316,8 +334,8 @@ function step7() {
   </div>`;
 }
 
-/* ---------- 8. оплата ---------- */
-function step8() {
+/* ---------- 9. оплата ---------- */
+function step9() {
   const f = state.form, o = state.order || {};
   return `<div class="col fade" style="gap:14px">
     <div class="card col" style="gap:12px">${summary(o)}</div>
@@ -336,8 +354,8 @@ function step8() {
   </div>`;
 }
 
-/* ---------- 9. готово ---------- */
-function step9() {
+/* ---------- 10. готово ---------- */
+function step10() {
   const o = state.order || {};
   return `<div class="col fade" style="gap:18px;align-items:center;text-align:center;padding:30px 0">
     <div style="width:96px;height:96px;border-radius:50%;background:var(--silk);display:grid;place-items:center;font-size:34px">✓</div>
@@ -345,6 +363,11 @@ function step9() {
     <span class="muted" style="font-size:14px;line-height:1.6;max-width:26em">Первая доставка — завтра в вашем окне. Меню, КБЖУ и остаток дней уже в личном кабинете.</span>
     <div class="card col" style="gap:10px;width:100%;text-align:left">${summary(o)}</div>
   </div>`;
+}
+
+function dietName(id) {
+  const d = (state.opts.diets || []).find(x => x.id === id);
+  return d ? d.icon + ' ' + d.name : '';
 }
 
 function summary(o) {
@@ -355,6 +378,7 @@ function summary(o) {
   const rows = [
     ['Рацион', t.name + ' · ' + (o.planDays || t.days) + ' дней'],
     ['Приёмов в день', String(o.meals || p.meals)],
+    ['Тип питания', dietName(p.diet)],
     ['Цель', (p.goals || []).join(', ')],
     ['Медицинское', (p.medical || []).join(', ')],
     ['Не едите', (p.dislikes || []).join(', ')],
@@ -379,6 +403,12 @@ function wire() {
   document.querySelectorAll('[data-p]').forEach(el => el.oninput = () => { p[el.dataset.p] = el.value; });
   document.querySelectorAll('[data-d]').forEach(el => el.oninput = () => { p.delivery[el.dataset.d] = el.value; });
   document.querySelectorAll('[data-k]').forEach(el => el.oninput = () => { p.kbju[el.dataset.k] = el.value; });
+
+  const dt = document.querySelector('[data-diet]');
+  if (dt) dt.querySelectorAll('.diet').forEach(b => b.onclick = () => {
+    dt.querySelectorAll('.diet').forEach(x => x.classList.remove('on'));
+    b.classList.add('on'); p.diet = b.dataset.val;
+  });
 
   const kb = document.querySelector('[data-kbju]');
   if (kb) kb.querySelectorAll('.chip').forEach(b => b.onclick = () => { p.kbju.on = b.dataset.on === '1'; render(); });
@@ -421,26 +451,26 @@ $('cta').onclick = async () => {
       const r = await NC.api('/api/orders', { method: 'POST', body: body });
       state.order = r.order; state.orderId = r.order.id;
       history.replaceState(null, '', '/order.html?order=' + r.order.id);
-      state.step = 7; return render();
+      state.step = 8; return render();
     }
-    if (state.step === 7) {
+    if (state.step === 8) {
       await refresh();
       if (state.order.status === 'pending') NC.toast('Заявка ещё на согласовании');
       if (state.order.status === 'rejected') NC.toast('Заявка отклонена — свяжитесь с нами');
       return render();
     }
-    if (state.step === 8) {
+    if (state.step === 9) {
       const r = await NC.api('/api/orders/' + state.orderId + '/pay', { method: 'POST', body: { pay: f.pay } });
       state.order = r.order;
       NC.setClient(r.clientId);
-      state.step = 9; return render();
+      state.step = 10; return render();
     }
     location.href = '/cabinet.html';
   } catch (e) { NC.toast(e.message); }
 };
 
 boot();
-setInterval(() => { if (state.step === 7) refresh().then(render).catch(() => {}); }, 8000);
+setInterval(() => { if (state.step === 8) refresh().then(render).catch(() => {}); }, 8000);
 </script>
 </body>
 </html>

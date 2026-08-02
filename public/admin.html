@@ -357,12 +357,13 @@ function dossierView() {
       <div class="col" style="gap:14px">
         <div class="card col" style="gap:12px">
           <span class="mono">Основное</span>
-          ${kv([['Имя', c.name], ['Телефон', c.phone], ['Адрес', c.address],
+          ${kv([['Тип питания', d.dietLabel], ['Имя', c.name], ['Телефон', c.phone], ['Адрес', c.address],
                 ['Окно доставки', (state.s.slots.find(x => x.id === c.slot) || {}).label],
                 ['Тариф', 'NC · ' + c.planDays + ' дней'], ['Осталось дней', c.daysLeft],
                 ['Последняя доставка', d.lastDelivery ? NC.dateRu(d.lastDelivery.slice(0, 10)) : ''],
                 ['Вес', p.weight && p.weight + ' кг'], ['Размер порций', p.portion],
-                ['Цель', (p.goals || []).join(', ')]])}
+                ['Цель', (p.goals || []).join(', ')],
+                ['Уточнение по питанию', p.dietNote]])}
         </div>
 
         <div class="grid" style="grid-template-columns:repeat(2,minmax(0,1fr));gap:14px">

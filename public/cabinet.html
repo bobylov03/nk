@@ -302,6 +302,11 @@ function viewProfile() {
       <span class="q-note">Меняйте что угодно и когда угодно — новый рацион соберём уже с учётом правок.</span>
     </div>
 
+    <div class="card q"><span class="q-title">Тип питания</span>
+      ${NC.diets(o.diets, p.diet)}
+      <label style="margin-top:4px"><span class="mono">Уточнения</span>
+        <textarea data-p="dietNote" placeholder="Если ваш вариант сложнее списка">${NC.esc(p.dietNote || '')}</textarea></label></div>
+
     <div class="card q"><span class="q-title">Основная цель</span>${NC.chips('goals', o.goals, p.goals)}</div>
 
     <div class="card q"><span class="q-title">Медицинские особенности</span>
@@ -374,6 +379,11 @@ function wire() {
     document.querySelectorAll('[data-p]').forEach(el => el.oninput = () => { p[el.dataset.p] = el.value; state.dirty = true; });
     document.querySelectorAll('[data-d]').forEach(el => el.oninput = () => { p.delivery[el.dataset.d] = el.value; state.dirty = true; });
     document.querySelectorAll('[data-k]').forEach(el => el.oninput = () => { p.kbju[el.dataset.k] = el.value; state.dirty = true; });
+    const dt = document.querySelector('[data-diet]');
+    if (dt) dt.querySelectorAll('.diet').forEach(b => b.onclick = () => {
+      dt.querySelectorAll('.diet').forEach(x => x.classList.remove('on'));
+      b.classList.add('on'); p.diet = b.dataset.val; state.dirty = true;
+    });
     const kb = document.querySelector('[data-kbju]');
     if (kb) kb.querySelectorAll('.chip').forEach(b => b.onclick = () => { p.kbju.on = b.dataset.on === '1'; state.dirty = true; render(); });
     const sl = document.querySelector('[data-slot]');
