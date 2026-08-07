@@ -11,7 +11,7 @@
 <body>
 <div class="phone">
   <div id="login" class="col" style="gap:16px;padding:60px 24px">
-    <h1 class="serif" style="font-size:30px">Ваша кухня</h1>
+    <h1 class="serif" style="font-size:30px">Моя кухня</h1>
     <span class="muted" style="font-size:13.5px;line-height:1.6">Введите телефон, указанный при оформлении рациона. В демо-данных есть <b>+995 555 12 34 56</b>.</span>
     <label><span class="mono">Телефон</span><input id="phone" placeholder="+995 555 12 34 56" inputmode="tel"></label>
     <button class="btn wide" id="enter">Войти</button>
@@ -361,10 +361,12 @@ function viewProfile() {
 
     <div class="card q"><span class="q-title">КБЖУ</span>
       <div class="chips" data-kbju>
-        <button type="button" class="chip ${p.kbju.on ? '' : 'on'}" data-on="0">Не считаю</button>
-        <button type="button" class="chip ${p.kbju.on ? 'on' : ''}" data-on="1">Есть цифры</button>
+        <button type="button" class="chip ${p.kbju.mode === 'calc' || p.kbju.on ? '' : 'on'}" data-mode="off">Не считаю</button>
+        <button type="button" class="chip ${p.kbju.mode === 'calc' ? 'on' : ''}" data-mode="calc">Рассчитать</button>
+        <button type="button" class="chip ${p.kbju.on && p.kbju.mode !== 'calc' ? 'on' : ''}" data-mode="manual">Есть цифры</button>
       </div>
-      ${p.kbju.on ? `<div class="grid" style="grid-template-columns:repeat(2,1fr);gap:10px">
+      ${p.kbju.mode === 'calc' ? NC.kbjuForm(p.kbju) : ''}
+      ${p.kbju.on && p.kbju.mode !== 'calc' ? `<div class="grid" style="grid-template-columns:repeat(2,1fr);gap:10px">
         <label><span class="mono">Калории</span><input data-k="kcal" value="${NC.esc(p.kbju.kcal)}" inputmode="numeric"></label>
         <label><span class="mono">Белки, г</span><input data-k="p" value="${NC.esc(p.kbju.p)}" inputmode="numeric"></label>
         <label><span class="mono">Жиры, г</span><input data-k="f" value="${NC.esc(p.kbju.f)}" inputmode="numeric"></label>
@@ -420,7 +422,14 @@ function wire() {
       b.classList.toggle('on'); state.dirty = true;
     });
     const kb = document.querySelector('[data-kbju]');
-    if (kb) kb.querySelectorAll('.chip').forEach(b => b.onclick = () => { p.kbju.on = b.dataset.on === '1'; state.dirty = true; render(); });
+    if (kb) kb.querySelectorAll('.chip').forEach(b => b.onclick = () => {
+      const m = b.dataset.mode;
+      p.kbju.mode = m;
+      p.kbju.on = m === 'manual' ? true : m === 'off' ? false : p.kbju.on;
+      state.dirty = true; render();
+    });
+    const cf = document.querySelector('.calc');
+    if (cf) NC.bindCalc(cf, p.kbju, () => { state.dirty = true; render(); });
     const sl = document.querySelector('[data-slot]');
     if (sl) sl.querySelectorAll('.chip').forEach(b => b.onclick = () => {
       sl.querySelectorAll('.chip').forEach(x => x.classList.remove('on'));

@@ -64,6 +64,121 @@ const NC = {
     return `<div class="days" data-days>` + options.map(d =>
       `<button type="button" class="${on.includes(d.n) ? 'on' : ''}" data-n="${d.n}">${d.short}</button>`).join('') + `</div>`;
   },
+  /* Расчёт нормы КБЖУ. Формула Миффлина–Сан Жеора — то, чем пользуются
+     диетологи по умолчанию. Все результаты — ориентир, не назначение врача. */
+  ACTIVITY: [
+    { id: 'low', k: 1.2, label: 'Сидячий образ жизни', note: 'офис, мало ходьбы' },
+    { id: 'light', k: 1.375, label: 'Лёгкая активность', note: 'тренировки 1–3 раза в неделю' },
+    { id: 'mid', k: 1.55, label: 'Средняя активность', note: 'тренировки 3–5 раз в неделю' },
+    { id: 'high', k: 1.725, label: 'Высокая активность', note: 'тренировки 6–7 раз в неделю' }
+  ],
+  GOALS: [
+    { id: 'lose', label: 'Снизить вес', sign: -1 },
+    { id: 'keep', label: 'Удержать вес', sign: 0 },
+    { id: 'gain', label: 'Набрать массу', sign: 1 }
+  ],
+  kbjuCalc(d) {
+    const sex = d.sex === 'm' ? 'm' : 'f';
+    const w = +d.weight || 0, h = +d.height || 0, age = +d.age || 0;
+    if (!w || !h || !age) return null;
+
+    const act = (NC.ACTIVITY.find(a => a.id === d.activity) || NC.ACTIVITY[1]).k;
+    let goal = NC.GOALS.find(g => g.id === d.goal) || NC.GOALS[1];
+    const bmiNow = w / Math.pow(h / 100, 2);
+
+    // если вес уже ниже нормы, дефицит не считаем — показываем поддержание
+    let warn = '';
+    if (bmiNow < 18.5 && goal.id === 'lose') {
+      goal = NC.GOALS.find(g => g.id === 'keep');
+      warn = 'Ваш вес уже ниже нормы для этого роста, поэтому мы рассчитали норму поддержания. Снижение веса в такой ситуации стоит обсуждать с врачом, а не с калькулятором.';
+    } else if (bmiNow < 18.5) {
+      warn = 'Вес ниже нормы для этого роста — стоит показать расчёт врачу или нутрициологу.';
+    } else if (bmiNow >= 30) {
+      warn = 'При таком индексе массы тела план питания лучше согласовать с врачом — возможно, потребуются анализы.';
+    }
+
+    const bmr = Math.round(10 * w + 6.25 * h - 5 * age + (sex === 'm' ? 5 : -161));
+    const tdee = Math.round(bmr * act);
+
+    // умеренный шаг: 15% дефицит, 12% профицит — быстрее небезопасно и хуже удерживается
+    let kcal = Math.round(tdee + tdee * goal.sign * (goal.sign < 0 ? 0.15 : 0.12));
+
+    // нижние границы: не опускаемся ниже основного обмена и ниже общепринятого минимума
+    const floor = Math.max(bmr, sex === 'm' ? 1500 : 1200);
+    const capped = kcal < floor;
+    if (capped) kcal = floor;
+    kcal = Math.round(kcal / 10) * 10;
+
+    // белок и жиры от массы тела, углеводы — остаток
+    const pPerKg = goal.id === 'lose' ? 1.9 : goal.id === 'gain' ? 1.8 : 1.6;
+    const p = Math.round(w * pPerKg);
+    const f = Math.round(w * (goal.id === 'lose' ? 0.9 : 1.0));
+    const c = Math.max(0, Math.round((kcal - p * 4 - f * 9) / 4));
+
+    // 7700 ккал ≈ 1 кг жировой ткани
+    const perWeek = +(((kcal - tdee) * 7) / 7700).toFixed(2);
+    const bmi = +(w / Math.pow(h / 100, 2)).toFixed(1);
+
+    if (capped && goal.id === 'lose') {
+      warn = warn || 'Мы не опускаем норму ниже безопасного минимума, поэтому снижение будет медленнее — так вес уходит устойчивее.';
+    }
+    return { bmr, tdee, kcal, p, f, c, perWeek, bmi, capped, floor, warn, goal: goal.id, adjusted: goal.id !== d.goal };
+  },
+  /* Форма калькулятора + результат. m — объект kbju из профиля. */
+  kbjuForm(m) {
+    const r = NC.kbjuCalc(m.calc || {});
+    const c = m.calc || {};
+    const sexBtn = (id, label) => `<button type="button" class="chip ${c.sex === id ? 'on' : ''}" data-calc-sex="${id}">${label}</button>`;
+    return `<div class="calc">
+      <div class="chips">${sexBtn('f', 'Женщина')}${sexBtn('m', 'Мужчина')}</div>
+      <div class="calc-grid">
+        <label><span class="mono">Возраст</span><input data-calc="age" value="${NC.esc(c.age || '')}" inputmode="numeric" placeholder="30"></label>
+        <label><span class="mono">Рост, см</span><input data-calc="height" value="${NC.esc(c.height || '')}" inputmode="numeric" placeholder="165"></label>
+        <label><span class="mono">Вес, кг</span><input data-calc="weight" value="${NC.esc(c.weight || '')}" inputmode="decimal" placeholder="62"></label>
+      </div>
+      <span class="mono">Активность</span>
+      <div class="chips">${NC.ACTIVITY.map(a =>
+        `<button type="button" class="chip ${c.activity === a.id ? 'on' : ''}" data-calc-act="${a.id}" title="${a.note}">${a.label}</button>`).join('')}</div>
+      <span class="mono">Цель</span>
+      <div class="chips">${NC.GOALS.map(g =>
+        `<button type="button" class="chip ${c.goal === g.id ? 'on' : ''}" data-calc-goal="${g.id}">${g.label}</button>`).join('')}</div>
+      ${r ? `
+        <div class="calc-out">
+          <div class="calc-main"><b>${r.kcal}</b><s>ккал в день</s></div>
+          <div class="calc-macros">
+            <span><b>${r.p}</b><s>белки, г</s></span>
+            <span><b>${r.f}</b><s>жиры, г</s></span>
+            <span><b>${r.c}</b><s>углеводы, г</s></span>
+          </div>
+          <div class="calc-note">
+            ${r.perWeek ? `<span>При такой норме вес будет меняться примерно на <b>${Math.abs(r.perWeek)} кг в неделю</b> — это около ${Math.abs(+(r.perWeek * 4.3).toFixed(1))} кг в месяц.</span>`
+              : '<span>Эта норма рассчитана на удержание текущего веса.</span>'}
+            <span class="muted">Основной обмен ${r.bmr} ккал, расход с активностью ${r.tdee} ккал. Индекс массы тела ${r.bmi}.</span>
+          </div>
+          ${r.warn ? `<div class="calc-warn">${NC.esc(r.warn)}</div>` : ''}
+          <button type="button" class="btn sm" data-calc-apply style="align-self:flex-start">Использовать эти цифры</button>
+        </div>`
+        : '<span class="q-note">Заполните возраст, рост и вес — расчёт появится здесь.</span>'}
+      <span class="q-note">Расчёт ориентировочный: формула Миффлина–Сан Жеора не учитывает состав тела и состояние здоровья. Если есть хронические заболевания, беременность или наблюдение у специалиста — опирайтесь на его рекомендации.</span>
+    </div>`;
+  },
+  /* обработчики калькулятора; onChange вызывается после каждого изменения */
+  bindCalc(host, m, onChange) {
+    const calc = m.calc || (m.calc = {});
+    const upd = () => onChange && onChange();
+    host.querySelectorAll('[data-calc]').forEach(el => el.oninput = () => { calc[el.dataset.calc] = el.value; upd(); });
+    host.querySelectorAll('[data-calc-sex]').forEach(b => b.onclick = () => { calc.sex = b.dataset.calcSex; upd(); });
+    host.querySelectorAll('[data-calc-act]').forEach(b => b.onclick = () => { calc.activity = b.dataset.calcAct; upd(); });
+    host.querySelectorAll('[data-calc-goal]').forEach(b => b.onclick = () => { calc.goal = b.dataset.calcGoal; upd(); });
+    const ap = host.querySelector('[data-calc-apply]');
+    if (ap) ap.onclick = () => {
+      const r = NC.kbjuCalc(calc);
+      if (!r) return NC.toast('Заполните возраст, рост и вес');
+      m.on = true; m.kcal = r.kcal; m.p = r.p; m.f = r.f; m.c = r.c; m.mode = 'manual';
+      NC.toast('Норма подставлена');
+      upd();
+    };
+  },
   stars(value, dishId, date) {
     return `<div class="stars" data-stars="${dishId}" data-date="${date || ''}">` +
       [1, 2, 3, 4, 5].map(n => `<button type="button" class="${n <= value ? 'on' : ''}" data-n="${n}" aria-label="${n} из 5">★</button>`).join('') +

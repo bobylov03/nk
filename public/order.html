@@ -101,7 +101,7 @@ function applyKnown(client, profile) {
   f.known = client.kitchen || '';
   const p = P();
   Object.assign(p, profile);
-  p.kbju = Object.assign({ on: false, kcal: '', p: '', f: '', c: '', note: '' }, profile.kbju || {});
+  p.kbju = Object.assign({ on: false, mode: 'off', kcal: '', p: '', f: '', c: '', note: '', calc: {} }, profile.kbju || {});
   p.delivery = Object.assign({ address: '', entrance: '', floor: '', intercom: '', note: '', slot: 's1' }, profile.delivery || {});
 }
 
@@ -275,10 +275,12 @@ function step6() {
       <span class="q-title">Хотите придерживаться конкретного КБЖУ?</span>
       <span class="q-note">Считать ничего не нужно. Если цифр нет — выберите «Нет», мы подберём норму сами.</span>
       <div class="chips" data-kbju>
-        <button type="button" class="chip ${k.on ? '' : 'on'}" data-on="0">Нет</button>
-        <button type="button" class="chip ${k.on ? 'on' : ''}" data-on="1">Да</button>
+        <button type="button" class="chip ${k.mode === 'calc' || k.on ? '' : 'on'}" data-mode="off">Нет, подберите сами</button>
+        <button type="button" class="chip ${k.mode === 'calc' ? 'on' : ''}" data-mode="calc">Рассчитать</button>
+        <button type="button" class="chip ${k.on && k.mode !== 'calc' ? 'on' : ''}" data-mode="manual">У меня есть цифры</button>
       </div>
-      ${k.on ? `
+      ${k.mode === 'calc' ? NC.kbjuForm(k) : ''}
+      ${k.on && k.mode !== 'calc' ? `
         <div class="grid" style="grid-template-columns:repeat(2,1fr);gap:10px">
           <label><span class="mono">Калории</span><input data-k="kcal" value="${NC.esc(k.kcal)}" inputmode="numeric" placeholder="1900"></label>
           <label><span class="mono">Белки, г</span><input data-k="p" value="${NC.esc(k.p)}" inputmode="numeric" placeholder="130"></label>
@@ -432,7 +434,14 @@ function wire() {
   });
 
   const kb = document.querySelector('[data-kbju]');
-  if (kb) kb.querySelectorAll('.chip').forEach(b => b.onclick = () => { p.kbju.on = b.dataset.on === '1'; render(); });
+  if (kb) kb.querySelectorAll('.chip').forEach(b => b.onclick = () => {
+    const m = b.dataset.mode;
+    p.kbju.mode = m;
+    p.kbju.on = m === 'manual' ? true : m === 'off' ? false : p.kbju.on;
+    render();
+  });
+  const cf = document.querySelector('.calc');
+  if (cf) NC.bindCalc(cf, p.kbju, () => render());
 
   const sl = document.querySelector('[data-slot]');
   if (sl) sl.querySelectorAll('.chip').forEach(b => b.onclick = () => { p.delivery.slot = b.dataset.val; render(); });
