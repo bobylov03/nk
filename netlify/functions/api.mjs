@@ -27,8 +27,9 @@ function migrate(db) {
   db.ratings = db.ratings || [];
   db.clients = (db.clients || []).map(c => ({
     photo: '', log: [], chefComments: [], chefNote: { date: '', text: '' }, ...c,
-    profile: { diet: 'omnivore', dietNote: '', ...(c.profile || {}) }
+    profile: { diet: 'omnivore', dietNote: '', persons: 1, weekdays: [1,2,3,4,5,6,7], slotNote: '', ...(c.profile || {}) }
   }));
+  db.slots = (db.slots || seed.slots).map(s => ({ extra: 0, custom: false, ...s }));
   db.dishes = (db.dishes || []).map(d => ({ cuisine: 'домашняя', ...d }));
   db.content = { ...seed.content, ...db.content };
   return db;

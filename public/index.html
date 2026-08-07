@@ -32,6 +32,8 @@
     <h1 id="title"></h1>
     <p id="text" style="margin:0;font-size:16px;line-height:1.6;max-width:30em"></p>
     <a class="btn" id="cta" href="/order.html" style="align-self:flex-start;border:0"></a>
+    <div class="perks" id="perks"></div>
+    <div class="live" id="live" hidden></div>
   </div>
   <div class="hero-photo" id="hero-photo"></div>
 </div>
@@ -97,30 +99,13 @@
   <span class="mono">MEALS MADE AROUND YOU</span>
   <div class="socials" id="socials"></div>
   <span class="mono" id="footer"></span>
+  <a class="mono" href="/terms.html" style="border-bottom:1px solid var(--line)">Условия сервиса</a>
 </div>
 
 <script src="/js/nc.js"></script>
+<script src="/js/nav.js"></script>
 <script src="/js/dish-sheet.js"></script>
 <script>
-/* высота шапки → отступ для якорей, чтобы заголовок не уезжал под неё */
-(function () {
-  const nav = document.getElementById('nav'), burger = document.getElementById('burger'), menu = document.getElementById('nav-menu');
-  const setH = () => document.documentElement.style.setProperty('--nav-h', (nav.offsetHeight + 14) + 'px');
-  setH();
-  addEventListener('resize', setH);
-  if (window.ResizeObserver) new ResizeObserver(setH).observe(nav);
-
-  const close = () => { nav.classList.remove('open'); burger.setAttribute('aria-expanded', 'false'); };
-  burger.onclick = () => {
-    const open = !nav.classList.contains('open');
-    nav.classList.toggle('open', open);
-    burger.setAttribute('aria-expanded', String(open));
-  };
-  menu.querySelectorAll('a').forEach(a => a.onclick = close);
-  addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
-  document.addEventListener('click', e => { if (!nav.contains(e.target)) close(); });
-})();
-
 (async function () {
   document.getElementById('logo').innerHTML = NC.logo();
   const data = await NC.api('/api/public');
@@ -150,16 +135,28 @@
   }
 
   // соцсети в подвале — показываем только заполненные
-  const ICONS = {
-    social_tg: ['Telegram', 'M21.9 4.3 2.9 11.6c-1 .4-1 1.7 0 2l4.8 1.5 1.8 5.6c.3.8 1.3 1 1.9.4l2.7-2.6 4.8 3.5c.7.5 1.7.1 1.9-.7l3.1-15c.2-1-.7-1.9-1.7-1.5zM8.9 14.4 18 8.2l-7.4 7.1-.3 3.3-1.4-4.2z'],
-    social_ig: ['Instagram', 'M12 2.2c3.2 0 3.6 0 4.9.1 3.3.1 4.8 1.7 4.9 4.9.1 1.3.1 1.6.1 4.8s0 3.6-.1 4.9c-.1 3.2-1.7 4.8-4.9 4.9-1.3.1-1.6.1-4.9.1s-3.6 0-4.9-.1c-3.2-.1-4.8-1.7-4.9-4.9C2.1 15.6 2.1 15.2 2.1 12s0-3.6.1-4.9c.1-3.2 1.7-4.8 4.9-4.9C8.4 2.2 8.8 2.2 12 2.2zm0 3.2a6.6 6.6 0 1 0 0 13.2 6.6 6.6 0 0 0 0-13.2zm0 10.9a4.3 4.3 0 1 1 0-8.6 4.3 4.3 0 0 1 0 8.6zm6.9-11.1a1.5 1.5 0 1 0 0 3.1 1.5 1.5 0 0 0 0-3.1z'],
-    social_wa: ['WhatsApp', 'M12 2a10 10 0 0 0-8.6 15L2 22l5.2-1.4A10 10 0 1 0 12 2zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3.1.8.8-3-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.6-6.1c-.3-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.1-.2 0-.4.1-.5l.4-.5c.1-.2.2-.3.3-.5v-.5l-.8-1.9c-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.5.1-.7.3-.9.9-1.1 2.1-.5 3.4a11 11 0 0 0 4.6 4.6c1.6.7 2.7.7 3.6.4.5-.2 1.2-.8 1.4-1.4.1-.4.1-.8.1-.9-.1-.1-.2-.2-.5-.2z'],
-    social_tt: ['TikTok', 'M16.6 2h-3.1v13.4a2.6 2.6 0 1 1-2.2-2.6V9.6a5.8 5.8 0 1 0 5.3 5.8V8.9c1.1.8 2.5 1.3 4 1.3V7.1c-2.3 0-4-1.9-4-5.1z']
-  };
-  document.getElementById('socials').innerHTML = Object.keys(ICONS)
-    .filter(k => c[k])
-    .map(k => `<a href="${NC.esc(c[k])}" target="_blank" rel="noopener" aria-label="${ICONS[k][0]}" title="${ICONS[k][0]}" style="border:0">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="${ICONS[k][1]}"/></svg></a>`).join('');
+  NC.socials(document.getElementById('socials'), c);
+
+  // преимущества: строки «иконка Текст» из админки
+  const perks = String(c.hero_badges || '').split('\n').map(x => x.trim()).filter(Boolean);
+  document.getElementById('perks').innerHTML = perks.map(line => {
+    const m = line.match(/^(\S+)\s+(.+)$/);
+    const icon = m ? m[1] : '•', text = m ? m[2] : line;
+    return `<span class="perk"><i>${icon}</i>${NC.esc(text)}</span>`;
+  }).join('');
+
+  // живой блок: показываем только заполненные пункты
+  const live = [
+    c.live_clients && ['👨‍🍳', 'Сегодня уже готовлю для', c.live_clients + ' ' + NC.plural(+c.live_clients, 'клиента', 'клиентов', 'клиентов')],
+    c.live_slots && ['🥗', 'Осталось на следующий цикл', c.live_slots + ' ' + NC.plural(+c.live_slots, 'место', 'места', 'мест')],
+    c.live_start && ['📅', 'Следующий набор стартует', c.live_start]
+  ].filter(Boolean);
+  if (live.length) {
+    const box = document.getElementById('live');
+    box.hidden = false;
+    box.innerHTML = live.map(([ic, label, val]) =>
+      `<span class="live-it"><i>${ic}</i><b>${NC.esc(val)}</b><s>${NC.esc(label)}</s></span>`).join('');
+  }
 
   ['about_kicker', 'about_title', 'about_text', 'about_sign'].forEach(k => {
     const el = document.getElementById(k.replace('_', '-'));

@@ -38,14 +38,15 @@ const QSTEPS = 7;                          // разделов анкеты
 const state = {
   step: 1, welcome: false, data: null, opts: null, orderId: null, order: null,
   form: {
-    tariffId: 't14', name: '', phone: '', flat: '', promo: '', pay: 'card', clientId: null, known: '',
+    tariffId: 't14', name: '', phone: '', flat: '', promo: '', pay: 'card', clientId: null, known: '', terms: false,
     profile: {
       diet: 'omnivore', dietNote: '',
       goals: [], medical: [], medicalNote: '', dislikes: [], dislikesNote: '',
       likes: [], likesNote: '', never: '', meals: 4, soups: 'Иногда', cuisine: 'Смешанная',
       favDishes: '', kbju: { on: false, kcal: '', p: '', f: '', c: '', note: '' },
       priorities: [], delivery: { address: '', entrance: '', floor: '', intercom: '', note: '', slot: 's1' },
-      extra: '', weight: '', portion: 'обычная'
+      extra: '', weight: '', portion: 'обычная',
+      persons: 1, weekdays: [1, 2, 3, 4, 5, 6, 7], slotNote: ''
     }
   }
 };
@@ -66,7 +67,9 @@ const CTA = ['Далее', 'Далее', 'Далее', 'Далее', 'Далее
 const $ = (id) => document.getElementById(id);
 const P = () => state.form.profile;
 const tariff = () => state.data.tariffs.find(t => t.id === state.form.tariffId) || state.data.tariffs[0];
-const sum = () => state.order ? state.order.sum : tariff().perDay * tariff().days;
+const slotOf = (id) => state.data.slots.find(s => s.id === id) || state.data.slots[0];
+const slotExtra = () => +(slotOf(P().delivery.slot).extra || 0);
+const sum = () => state.order ? state.order.sum : tariff().perDay * tariff().days + slotExtra();
 
 async function boot() {
   state.data = await NC.api('/api/public');
@@ -171,6 +174,14 @@ function step1() {
       <span class="q-title">Сколько приёмов пищи хотите получать?</span>
       ${NC.radios('meals', o.meals, P().meals)}
       <span class="q-note">${P().meals === 3 ? 'Завтрак, обед, ужин' : P().meals === 4 ? 'Завтрак, обед, ужин и перекус' : 'Полный день с двумя перекусами'}</span>
+      <span class="q-title" style="margin-top:8px">На скольких человек?</span>
+      ${NC.radios('persons', o.persons, P().persons)}
+      <span class="q-note">Для пар готовим двойные порции каждого блюда.</span>
+    </div>
+    <div class="card q">
+      <span class="q-title">В какие дни привозить?</span>
+      <span class="q-note">Можно получать рацион не каждый день — программа продлится на пропущенные дни.</span>
+      ${NC.days(o.weekdays, P().weekdays)}
     </div>
     <button class="btn ghost sm" id="known" style="align-self:flex-start">Я уже заказывал(а) — подставить профиль</button>
   </div>`;
@@ -305,12 +316,19 @@ function step7() {
       <label><span class="mono">Комментарий курьеру</span><input data-d="note" value="${NC.esc(d.note)}" placeholder="Оставить у двери…"></label>
       <span class="mono" style="margin-top:4px">Время доставки</span>
       <div class="chips" data-slot>${state.data.slots.map(s =>
-        `<button type="button" class="chip ${d.slot === s.id ? 'on' : ''}" data-val="${s.id}" style="font-family:var(--mono);font-size:11px">${s.label}</button>`).join('')}</div>
+        `<button type="button" class="chip ${d.slot === s.id ? 'on' : ''}" data-val="${s.id}">${NC.esc(s.label)}${s.extra ? ` <b style="font-weight:400">+${s.extra} ${NC.cur}</b>` : ''}</button>`).join('')}</div>
+      ${slotOf(d.slot).custom ? `<label style="margin-top:6px"><span class="mono">Желаемое время</span>
+        <input data-p="slotNote" value="${NC.esc(P().slotNote)}" placeholder="Например: строго к 08:30"></label>
+        <span class="q-note">Согласуем индивидуально. Надбавка ${slotExtra()} ${NC.cur} уже в стоимости.</span>` : ''}
     </div>
     <div class="card q">
       <span class="q-title">Что-то ещё?</span>
       <span class="q-note">Есть ли что-то, что поможет приготовить для вас идеальный рацион?</span>
       <textarea data-p="extra" placeholder="Любые пожелания">${NC.esc(P().extra)}</textarea>
+    </div>
+    <div class="card q">
+      <label class="agree"><input type="checkbox" id="terms" ${state.form.terms ? 'checked' : ''}>
+        <span>Я ознакомился(-ась) и принимаю <a href="/terms.html" target="_blank">Условия сервиса</a></span></label>
     </div>
     <span class="muted" style="font-size:12.5px;line-height:1.6">Оплата сейчас не потребуется. Мы свяжемся, подтвердим рацион и зону доставки, и только после этого откроем оплату.</span>
   </div>`;
@@ -386,7 +404,10 @@ function summary(o) {
     ['Имя', o.name || f.name],
     ['Телефон', o.phone || f.phone],
     ['Адрес', [d.address, d.entrance && 'подъезд ' + d.entrance, d.floor && 'этаж ' + d.floor].filter(Boolean).join(', ')],
-    ['Окно доставки', slot],
+    ['Окно доставки', slot + (o.slotNote || p.slotNote ? ' · ' + (o.slotNote || p.slotNote) : '')],
+    ['Дней доставки в неделю', (p.weekdays || []).length < 7 ? (p.weekdays || []).length + ' из 7' : ''],
+    ['Персон', (o.profile || p).persons > 1 ? (o.profile || p).persons : ''],
+    ['Индивидуальное время', (o.slotExtra || slotExtra()) ? '+' + (o.slotExtra || slotExtra()) + ' ' + NC.cur : ''],
     ['Итого', NC.money(o.sum || sum())]
   ].filter(r => r[1]);
   return rows.map(([k, v]) =>
@@ -414,10 +435,18 @@ function wire() {
   if (kb) kb.querySelectorAll('.chip').forEach(b => b.onclick = () => { p.kbju.on = b.dataset.on === '1'; render(); });
 
   const sl = document.querySelector('[data-slot]');
-  if (sl) sl.querySelectorAll('.chip').forEach(b => b.onclick = () => {
-    sl.querySelectorAll('.chip').forEach(x => x.classList.remove('on'));
-    b.classList.add('on'); p.delivery.slot = b.dataset.val;
+  if (sl) sl.querySelectorAll('.chip').forEach(b => b.onclick = () => { p.delivery.slot = b.dataset.val; render(); });
+
+  const dw = document.querySelector('[data-days]');
+  if (dw) dw.querySelectorAll('button').forEach(b => b.onclick = () => {
+    const n = +b.dataset.n, i = p.weekdays.indexOf(n);
+    if (i >= 0) { if (p.weekdays.length === 1) return NC.toast('Оставьте хотя бы один день'); p.weekdays.splice(i, 1); }
+    else p.weekdays.push(n);
+    b.classList.toggle('on');
   });
+
+  const tc = $('terms');
+  if (tc) tc.onchange = () => { state.form.terms = tc.checked; };
 
   const known = $('known');
   if (known) known.onclick = async () => {
@@ -444,9 +473,10 @@ $('cta').onclick = async () => {
     if (state.step < QSTEPS) { state.step++; return render(); }
     if (state.step === QSTEPS) {
       if (!f.name || !f.phone || !p.delivery.address) return NC.toast('Заполните имя, телефон и адрес');
+      if (!f.terms) return NC.toast('Примите Условия сервиса');
       const body = {
         name: f.name, phone: f.phone, flat: p.delivery.intercom, promo: f.promo,
-        tariffId: f.tariffId, clientId: f.clientId, profile: p
+        tariffId: f.tariffId, clientId: f.clientId, profile: p, terms: f.terms, slot: p.delivery.slot
       };
       const r = await NC.api('/api/orders', { method: 'POST', body: body });
       state.order = r.order; state.orderId = r.order.id;

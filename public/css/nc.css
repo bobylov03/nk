@@ -377,3 +377,72 @@ textarea{min-height:82px;resize:vertical;font-family:var(--sans);line-height:1.5
 .diet.on .dot{border-color:var(--gold-solid)}
 .diet.on .dot::after{content:'';position:absolute;inset:3.5px;border-radius:50%;background:var(--gold-solid)}
 @media (max-width:560px){.diet{padding:11px}.diet .tx b{font-size:14px}.diet .tx i{font-size:11.5px}}
+
+/* преимущества на первом экране */
+.perks{display:flex;flex-wrap:wrap;gap:9px;margin-top:4px}
+.perk{display:inline-flex;align-items:center;gap:8px;padding:10px 15px;border-radius:100px;
+  background:rgba(255,255,255,.72);border:1px solid var(--gold);font-size:13.5px;line-height:1.2;
+  backdrop-filter:blur(4px);white-space:nowrap}
+.perk i{font-style:normal;font-size:15px;line-height:1}
+
+/* живой блок: клиенты / места / дата старта */
+.live{display:flex;flex-wrap:wrap;gap:10px;margin-top:6px}
+.live-it{display:inline-flex;flex-direction:column;gap:1px;padding:11px 16px;border-radius:14px;
+  background:var(--plum);color:var(--champagne);min-width:0}
+.live-it i{font-style:normal;font-size:15px;line-height:1.1}
+.live-it b{font-family:var(--serif);font-weight:500;font-size:19px;line-height:1.15}
+.live-it s{text-decoration:none;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:rgba(220,192,166,.66)}
+
+@media (max-width:760px){
+  .perks{gap:7px}
+  .perk{padding:8px 12px;font-size:12.5px}
+  .live-it{padding:10px 13px;flex:1 1 auto}
+  .live-it b{font-size:17px}
+}
+
+/* дни недели */
+.days{display:flex;gap:6px;flex-wrap:wrap}
+.days button{flex:1 1 40px;min-width:40px;padding:10px 0;border-radius:11px;cursor:pointer;
+  border:1px solid var(--line);background:#faf3eb;color:var(--muted);
+  font-family:var(--sans);font-size:12.5px;text-transform:lowercase;transition:.14s}
+.days button.on{background:var(--plum);border-color:var(--plum);color:var(--champagne)}
+
+/* чекбокс согласия */
+.agree{flex-direction:row;align-items:flex-start;gap:11px;cursor:pointer}
+.agree input{width:20px;height:20px;flex:0 0 auto;margin:1px 0 0;accent-color:var(--plum);padding:0}
+.agree span{font-size:13px;line-height:1.5}
+
+/* страница условий */
+.terms-head{padding:44px 40px 26px;display:flex;flex-direction:column;gap:10px;background:var(--silk)}
+.terms-wrap{display:grid;grid-template-columns:250px 1fr;gap:44px;padding:40px 40px 60px;align-items:start}
+.terms-toc{position:sticky;top:var(--nav-h,96px);display:flex;flex-direction:column;gap:9px}
+.terms-toc .mono{margin-bottom:3px}
+.terms-toc a{border:0;font-size:13px;line-height:1.35;color:var(--muted)}
+.terms-toc a:hover{color:var(--plum);opacity:1}
+.terms-body{max-width:44em;display:flex;flex-direction:column;gap:30px}
+.terms-body section{scroll-margin-top:var(--nav-h,96px);display:flex;flex-direction:column;gap:11px}
+.terms-body h2{font-size:25px;padding-bottom:10px;border-bottom:1px solid var(--gold)}
+.terms-body p{margin:0;font-size:14.5px;line-height:1.7;color:var(--soft)}
+.terms-body ul{margin:0;padding-left:19px;display:flex;flex-direction:column;gap:6px}
+.terms-body li{font-size:14.5px;line-height:1.6;color:var(--soft)}
+@media (max-width:900px){
+  .terms-wrap{grid-template-columns:1fr;gap:26px;padding:26px 20px 46px}
+  .terms-toc{position:static;flex-direction:row;flex-wrap:wrap;gap:8px}
+  .terms-toc .mono{width:100%}
+  .terms-toc a{padding:7px 12px;border:1px solid var(--line);border-radius:100px;font-size:12px}
+  .terms-head{padding:30px 20px 20px}
+  .terms-body h2{font-size:22px}
+}
+
+/* итог завершённого цикла */
+.cycle{display:flex;flex-direction:column;gap:12px;padding:22px;border-radius:var(--r);
+  background:linear-gradient(155deg,var(--plum),#5d2f4d);color:var(--champagne);
+  border:1px solid var(--gold-solid);box-shadow:0 0 0 1px rgba(184,150,102,.35),0 14px 34px rgba(74,36,61,.25)}
+.cycle .mono{color:rgba(220,192,166,.6)}
+.cycle .t{font-size:25px;line-height:1.15}
+.cycle .tx{font-size:13.5px;line-height:1.65;color:rgba(220,192,166,.9);white-space:pre-line}
+.cycle-nums{display:flex;gap:10px;flex-wrap:wrap;margin:2px 0}
+.cycle-nums span{flex:1 1 82px;display:flex;flex-direction:column;gap:2px;padding:11px 13px;
+  border-radius:12px;background:rgba(220,192,166,.11)}
+.cycle-nums b{font-family:var(--serif);font-weight:500;font-size:25px;line-height:1}
+.cycle-nums s{text-decoration:none;font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:rgba(220,192,166,.62)}

@@ -94,6 +94,28 @@ function chefCard() {
     <span class="t">${NC.esc(n.text)}</span></div>`;
 }
 
+/* Итог цикла — показывается, когда дни закончились */
+function cycleCard() {
+  const cy = state.d.cycle;
+  if (!cy.done) return '';
+  const text = String(state.d.cycleText || '')
+    .replace(/\{days\}/g, cy.planDays)
+    .replace(/\{dishes\}/g, cy.dishes)
+    .replace(/\{rated\}/g, cy.rated);
+  return `<div class="cycle fade">
+    <span class="mono">Итог цикла</span>
+    <span class="serif t">${NC.esc(state.d.cycleTitle)}</span>
+    <span class="tx">${NC.esc(text)}</span>
+    <div class="cycle-nums">
+      <span><b>${cy.days}</b><s>дней доставки</s></span>
+      <span><b>${cy.dishes}</b><s>${NC.plural(cy.dishes, 'блюдо', 'блюда', 'блюд')}</s></span>
+      ${cy.rated ? `<span><b>${cy.rated}</b><s>${NC.plural(cy.rated, 'оценка', 'оценки', 'оценок')}</s></span>` : ''}
+    </div>
+    <span class="tx" style="font-size:14px">Готовы продолжить?</span>
+    <a class="btn light" href="/order.html" style="border:0;align-self:flex-start">${NC.esc(state.d.cycleCta)}</a>
+  </div>`;
+}
+
 function planCard() {
   const c = state.d.client;
   const pct = Math.round(c.daysLeft / Math.max(1, c.planDays) * 100);
@@ -173,6 +195,7 @@ function viewToday() {
   const bars = [['Белки', t.totals.p, n.p, 'г'], ['Жиры', t.totals.f, n.f, 'г'], ['Углеводы', t.totals.c, n.c, 'г'], ['Калории', t.totals.kcal, n.kcal, 'ккал']];
   const yDishes = y.slots.filter(s => s.dish).map(s => Object.assign({}, s.dish, { catLabel: s.catLabel }));
   return `<div class="col fade" style="gap:16px">
+    ${cycleCard()}
     ${chefCard()}
     ${planCard()}
     <div class="row" style="justify-content:space-between;align-items:baseline">
@@ -324,6 +347,11 @@ function viewProfile() {
     <div class="card q"><span class="q-title">Никогда не использовать</span>
       <textarea data-p="never" placeholder="Категорические запреты">${NC.esc(p.never)}</textarea></div>
 
+    <div class="card q"><span class="q-title">В какие дни привозить</span>
+      ${NC.days(o.weekdays, p.weekdays)}
+      <span class="q-note">Пропущенные дни не сгорают — программа продлевается.</span>
+      <span class="q-title" style="margin-top:6px">На скольких человек</span>${NC.radios('persons', o.persons, p.persons)}</div>
+
     <div class="card q"><span class="q-title">Приёмов пищи</span>${NC.radios('meals', o.meals, p.meals)}
       <span class="q-title" style="margin-top:6px">Супы</span>${NC.radios('soups', o.soups, p.soups)}
       <span class="q-title" style="margin-top:6px">Кухня</span>${NC.radios('cuisine', o.cuisines, p.cuisine)}
@@ -383,6 +411,13 @@ function wire() {
     if (dt) dt.querySelectorAll('.diet').forEach(b => b.onclick = () => {
       dt.querySelectorAll('.diet').forEach(x => x.classList.remove('on'));
       b.classList.add('on'); p.diet = b.dataset.val; state.dirty = true;
+    });
+    const dw = document.querySelector('[data-days]');
+    if (dw) dw.querySelectorAll('button').forEach(b => b.onclick = () => {
+      const n = +b.dataset.n, i = p.weekdays.indexOf(n);
+      if (i >= 0) { if (p.weekdays.length === 1) return NC.toast('Оставьте хотя бы один день'); p.weekdays.splice(i, 1); }
+      else p.weekdays.push(n);
+      b.classList.toggle('on'); state.dirty = true;
     });
     const kb = document.querySelector('[data-kbju]');
     if (kb) kb.querySelectorAll('.chip').forEach(b => b.onclick = () => { p.kbju.on = b.dataset.on === '1'; state.dirty = true; render(); });

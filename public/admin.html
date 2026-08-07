@@ -302,7 +302,33 @@ function plans() {
       <div class="row" style="justify-content:space-between;align-items:baseline;padding-top:14px;border-top:1px solid var(--gold);margin-top:auto">
         <span class="mono">Итого</span><span class="serif" style="font-size:24px">${NC.money(t.perDay * t.days)}</span>
       </div>
-    </div>`).join('')}</div>`;
+    </div>`).join('')}</div>
+
+    <div class="card col" style="gap:14px;margin-top:20px">
+      <div class="row" style="justify-content:space-between;align-items:baseline">
+        <span class="serif" style="font-size:22px">Окна доставки</span>
+        <span class="muted" style="font-size:12.5px">Надбавка 0 — доставка бесплатная</span>
+      </div>
+      <div class="col" style="gap:9px" id="slots-box">
+        ${state.s.slots.map((sl, i) => `
+          <div class="row slot-row" style="gap:10px" data-slot-i="${i}">
+            <input data-slot="${i}:label" value="${NC.esc(sl.label)}" placeholder="09:00–10:00" style="flex:1">
+            <label style="flex-direction:row;align-items:center;gap:7px;flex:0 0 auto">
+              <span class="muted" style="font-size:12px;white-space:nowrap">надбавка</span>
+              <input data-slot="${i}:extra" value="${+sl.extra || 0}" inputmode="numeric" style="width:74px;text-align:right;font-family:var(--mono);font-size:12px">
+            </label>
+            <label style="flex-direction:row;align-items:center;gap:6px;flex:0 0 auto" title="Клиент сможет вписать своё время">
+              <input type="checkbox" data-slot="${i}:custom" ${sl.custom ? 'checked' : ''} style="width:17px;height:17px;padding:0;accent-color:var(--plum)">
+              <span class="muted" style="font-size:12px;white-space:nowrap">своё время</span>
+            </label>
+            <button class="chip" data-slot-del="${i}" title="Удалить">×</button>
+          </div>`).join('')}
+      </div>
+      <div class="row" style="gap:9px">
+        <button class="btn ghost sm" id="slot-add">Добавить окно</button>
+        <button class="btn sm" id="slot-save">Сохранить окна</button>
+      </div>
+    </div>`;
 }
 
 function clients() {
@@ -362,6 +388,9 @@ function dossierView() {
                 ['Тариф', 'NC · ' + c.planDays + ' дней'], ['Осталось дней', c.daysLeft],
                 ['Последняя доставка', d.lastDelivery ? NC.dateRu(d.lastDelivery.slice(0, 10)) : ''],
                 ['Вес', p.weight && p.weight + ' кг'], ['Размер порций', p.portion],
+                ['График доставки', (p.weekdays || []).length < 7 ? (p.weekdays || []).length + ' дней в неделю' : 'каждый день'],
+                ['Персон', p.persons > 1 ? p.persons : ''],
+                ['Съедено за цикл', d.cycle ? d.cycle.dishes + ' блюд за ' + d.cycle.days + ' дней' : ''],
                 ['Цель', (p.goals || []).join(', ')],
                 ['Уточнение по питанию', p.dietNote]])}
         </div>
@@ -490,6 +519,15 @@ function content() {
     ['about_kicker', 'Обо мне — надзаголовок', 1], ['about_title', 'Обо мне — заголовок', 2], ['about_text', 'Обо мне — текст', 4], ['about_sign', 'Обо мне — подпись', 1], ['about_photo', 'Обо мне — файл фото в public/img', 1],
     ['delivery_title', 'Блок доставки — заголовок', 1], ['delivery_text', 'Блок доставки — текст', 3], ['footer', 'Подвал', 1],
     ['hero_photos', 'Фото на главном экране — файлы из public/img через запятую', 2],
+    ['hero_badges', 'Преимущества на первом экране — по одному в строке, начиная с эмодзи', 5],
+    ['live_clients', 'Блок на главной: сколько клиентов сегодня (пусто — скрыть)', 1],
+    ['live_slots', 'Блок на главной: сколько мест осталось (пусто — скрыть)', 1],
+    ['live_start', 'Блок на главной: когда стартует набор (пусто — скрыть)', 1],
+    ['cycle_title', 'Завершение цикла — заголовок', 1],
+    ['cycle_text', 'Завершение цикла — текст. {days} = дней, {dishes} = блюд, {rated} = оценок', 6],
+    ['cycle_cta', 'Завершение цикла — кнопка', 1],
+    ['terms_updated', 'Условия сервиса — дата вступления в силу', 1],
+    ['terms', 'Условия сервиса. «## » — заголовок раздела, «• » — пункт списка', 20],
     ['social_tg', 'Telegram — ссылка', 1], ['social_ig', 'Instagram — ссылка', 1], ['social_wa', 'WhatsApp — ссылка', 1], ['social_tt', 'TikTok — ссылка', 1]];
   return `<div class="grid" style="grid-template-columns:1.1fr .9fr">
     <div class="col" style="gap:14px">
@@ -554,6 +592,40 @@ function wire() {
       render();
     } catch (e) { NC.toast(e.message); }
   };
+  const readSlots = () => {
+    const out = [];
+    document.querySelectorAll('[data-slot-i]').forEach(row => {
+      const i = row.dataset.slotI;
+      const g = (f) => row.querySelector(`[data-slot="${i}:${f}"]`);
+      const old = state.s.slots[+i] || {};
+      out.push({
+        id: old.id || 's' + (out.length + 1),
+        label: g('label').value,
+        extra: +g('extra').value || 0,
+        custom: g('custom').checked
+      });
+    });
+    return out;
+  };
+  const sadd = $('slot-add');
+  if (sadd) sadd.onclick = () => {
+    state.s.slots = readSlots().concat([{ id: 's' + Date.now().toString(36), label: '', extra: 0, custom: false }]);
+    render();
+  };
+  document.querySelectorAll('[data-slot-del]').forEach(b => b.onclick = () => {
+    const list = readSlots();
+    if (list.length < 2) return NC.toast('Оставьте хотя бы одно окно');
+    list.splice(+b.dataset.slotDel, 1);
+    state.s.slots = list; render();
+  });
+  const ssave = $('slot-save');
+  if (ssave) ssave.onclick = async () => {
+    try {
+      await NC.api('/api/slots', { method: 'PUT', body: { slots: readSlots() } });
+      NC.toast('Окна доставки сохранены'); reload();
+    } catch (e) { NC.toast(e.message); }
+  };
+
   const addc = $('add-comment');
   if (addc) addc.onclick = async () => {
     const id = state.dossier.client.id, ta = $('chef-comment');

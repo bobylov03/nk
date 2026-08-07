@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>NC meals — условия сервиса</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=Jost:wght@300;400;500&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/nc.css">
+</head>
+<body>
+
+<div class="nav" id="nav">
+  <a href="/" style="border:0" id="logo"></a>
+  <nav id="nav-menu">
+    <a href="/#menu" style="border:0">Меню дня</a>
+    <a href="/#how" style="border:0">Как это работает</a>
+    <a href="/#tariffs" style="border:0">Тарифы</a>
+    <a href="/#delivery" style="border:0">Доставка</a>
+    <a href="/cabinet.html" class="only-mobile" style="border:0">Личный кабинет</a>
+  </nav>
+  <div class="row" style="gap:10px">
+    <a class="btn ghost sm" href="/cabinet.html" style="border-bottom:1px solid rgba(74,36,61,.28)">Личный кабинет</a>
+    <a class="btn sm" href="/order.html" style="border:0">Оформить рацион</a>
+  </div>
+  <button class="burger" id="burger" aria-label="Меню" aria-expanded="false" aria-controls="nav-menu"><i></i></button>
+</div>
+
+<div class="terms-head">
+  <span class="mono">NC MEALS</span>
+  <h1 style="font-size:clamp(30px,5vw,46px)">Условия сервиса</h1>
+  <span class="muted" style="font-size:13.5px" id="updated"></span>
+</div>
+
+<div class="terms-wrap">
+  <aside class="terms-toc" id="toc"></aside>
+  <article class="terms-body" id="body"><span class="muted">Загружаем…</span></article>
+</div>
+
+<div class="section dark split" style="margin-top:20px">
+  <div class="col" style="gap:10px;max-width:34em">
+    <h2 class="h-sec" style="color:var(--champagne)">Остались вопросы?</h2>
+    <span class="muted" style="font-size:14px;line-height:1.6">Напишите нам — ответим и поможем подобрать рацион.</span>
+  </div>
+  <a class="btn light" href="/order.html" style="border:0">Оформить рацион</a>
+</div>
+
+<div class="footer">
+  <span class="mono">MEALS MADE AROUND YOU</span>
+  <div class="socials" id="socials"></div>
+  <span class="mono" id="footer"></span>
+</div>
+
+<script src="/js/nc.js"></script>
+<script src="/js/nav.js"></script>
+<script>
+(async function () {
+  document.getElementById('logo').innerHTML = NC.logo();
+  const c = (await NC.api('/api/public')).content;
+  document.getElementById('footer').textContent = c.footer || '';
+  document.getElementById('updated').textContent = c.terms_updated ? 'Действуют с ' + c.terms_updated : '';
+  NC.socials(document.getElementById('socials'), c);
+
+  /* формат: «## Заголовок», строки текста, «• пункт списка» */
+  const blocks = String(c.terms || '').split(/\n(?=##\s)/).map(b => b.trim()).filter(Boolean);
+  const slug = (i) => 'p' + (i + 1);
+
+  document.getElementById('body').innerHTML = blocks.map((b, i) => {
+    const lines = b.split('\n');
+    const title = lines[0].replace(/^##\s*/, '').trim();
+    let html = '', list = [];
+    const flush = () => {
+      if (!list.length) return;
+      html += '<ul>' + list.map(x => `<li>${NC.esc(x)}</li>`).join('') + '</ul>';
+      list = [];
+    };
+    lines.slice(1).forEach(raw => {
+      const t = raw.trim();
+      if (!t) return;
+      if (/^[•\-–]\s*/.test(t)) list.push(t.replace(/^[•\-–]\s*/, ''));
+      else { flush(); html += `<p>${NC.esc(t)}</p>`; }
+    });
+    flush();
+    return `<section id="${slug(i)}"><h2>${NC.esc(title)}</h2>${html}</section>`;
+  }).join('');
+
+  document.getElementById('toc').innerHTML = '<span class="mono">Содержание</span>' +
+    blocks.map((b, i) => {
+      const title = b.split('\n')[0].replace(/^##\s*/, '').trim();
+      return `<a href="#${slug(i)}">${NC.esc(title)}</a>`;
+    }).join('');
+})();
+</script>
+</body>
+</html>
