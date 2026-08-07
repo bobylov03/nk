@@ -125,7 +125,7 @@ const NC = {
     return { bmr, tdee, kcal, p, f, c, perWeek, bmi, capped, floor, warn, goal: goal.id, adjusted: goal.id !== d.goal };
   },
   /* Форма калькулятора + результат. m — объект kbju из профиля. */
-  kbjuForm(m) {
+  kbjuForm(m, opts) {
     const r = NC.kbjuCalc(m.calc || {});
     const c = m.calc || {};
     const sexBtn = (id, label) => `<button type="button" class="chip ${c.sex === id ? 'on' : ''}" data-calc-sex="${id}">${label}</button>`;
@@ -156,16 +156,16 @@ const NC = {
             <span class="muted">Основной обмен ${r.bmr} ккал, расход с активностью ${r.tdee} ккал. Индекс массы тела ${r.bmi}.</span>
           </div>
           ${r.warn ? `<div class="calc-warn">${NC.esc(r.warn)}</div>` : ''}
-          <button type="button" class="btn sm" data-calc-apply style="align-self:flex-start">Использовать эти цифры</button>
+          <button type="button" class="btn sm" data-calc-apply style="align-self:flex-start">${NC.esc((opts && opts.applyLabel) || 'Использовать эти цифры')}</button>
         </div>`
         : '<span class="q-note">Заполните возраст, рост и вес — расчёт появится здесь.</span>'}
       <span class="q-note">Расчёт ориентировочный: формула Миффлина–Сан Жеора не учитывает состав тела и состояние здоровья. Если есть хронические заболевания, беременность или наблюдение у специалиста — опирайтесь на его рекомендации.</span>
     </div>`;
   },
   /* обработчики калькулятора; onChange вызывается после каждого изменения */
-  bindCalc(host, m, onChange) {
+  bindCalc(host, m, onChange, opts) {
     const calc = m.calc || (m.calc = {});
-    const upd = () => onChange && onChange();
+    const upd = (r) => onChange && onChange(r);
     host.querySelectorAll('[data-calc]').forEach(el => el.oninput = () => { calc[el.dataset.calc] = el.value; upd(); });
     host.querySelectorAll('[data-calc-sex]').forEach(b => b.onclick = () => { calc.sex = b.dataset.calcSex; upd(); });
     host.querySelectorAll('[data-calc-act]').forEach(b => b.onclick = () => { calc.activity = b.dataset.calcAct; upd(); });
@@ -175,8 +175,8 @@ const NC = {
       const r = NC.kbjuCalc(calc);
       if (!r) return NC.toast('Заполните возраст, рост и вес');
       m.on = true; m.kcal = r.kcal; m.p = r.p; m.f = r.f; m.c = r.c; m.mode = 'manual';
-      NC.toast('Норма подставлена');
-      upd();
+      if (!(opts && opts.silent)) NC.toast('Норма подставлена');
+      upd(r);
     };
   },
   stars(value, dishId, date) {

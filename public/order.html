@@ -77,6 +77,19 @@ async function boot() {
   NC.cur = state.data.content.currency || '₾';
   P().delivery.slot = state.data.slots[0].id;
 
+  // норма, рассчитанная калькулятором на главной
+  try {
+    const saved = localStorage.getItem('nc_kbju');
+    if (saved) {
+      const k = JSON.parse(saved);
+      if (k && k.kcal) {
+        P().kbju = Object.assign(P().kbju, k, { mode: 'manual', on: true });
+        NC.toast('Норма из калькулятора подставлена');
+      }
+      localStorage.removeItem('nc_kbju');
+    }
+  } catch (e) { /* повреждённые данные просто игнорируем */ }
+
   const q = new URLSearchParams(location.search);
   if (q.get('tariff')) state.form.tariffId = q.get('tariff');
   if (q.get('order')) { state.orderId = q.get('order'); await refresh(); state.step = 8; render(); return; }
