@@ -454,7 +454,7 @@ function wire() {
     render();
   });
   const cf = document.querySelector('.calc');
-  if (cf) NC.bindCalc(cf, p.kbju, () => render());
+  if (cf) NC.bindCalc(cf, p.kbju, () => render());   // перерисовка только после «использовать»
 
   const sl = document.querySelector('[data-slot]');
   if (sl) sl.querySelectorAll('.chip').forEach(b => b.onclick = () => { p.delivery.slot = b.dataset.val; render(); });

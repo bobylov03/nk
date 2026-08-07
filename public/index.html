@@ -157,16 +157,13 @@
   const modal = document.getElementById('calc-modal'), host = document.getElementById('calc-host');
   const model = { on: false, mode: 'calc', kcal: '', p: '', f: '', c: '', note: '', calc: {} };
   const drawCalc = () => {
-    host.innerHTML = NC.kbjuForm(model, { applyLabel: 'Перейти к рациону с этой нормой', silent: true });
-    NC.bindCalc(host, model, (applied) => {
-      if (applied) {
-        // норму переносим в анкету через localStorage
-        try { localStorage.setItem('nc_kbju', JSON.stringify(model)); } catch (e) {}
-        location.href = '/order.html';
-        return;
-      }
-      drawCalc();
-    });
+    const opts = { applyLabel: 'Перейти к рациону с этой нормой', silent: true };
+    host.innerHTML = NC.kbjuForm(model, opts);
+    NC.bindCalc(host, model, () => {
+      // норму переносим в анкету через localStorage
+      try { localStorage.setItem('nc_kbju', JSON.stringify(model)); } catch (e) {}
+      location.href = '/order.html';
+    }, opts);
   };
   const openCalc = () => { modal.classList.remove('hidden'); document.body.style.overflow = 'hidden'; drawCalc(); };
   const closeCalc = () => { modal.classList.add('hidden'); document.body.style.overflow = ''; };

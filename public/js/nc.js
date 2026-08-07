@@ -124,9 +124,9 @@ const NC = {
     }
     return { bmr, tdee, kcal, p, f, c, perWeek, bmi, capped, floor, warn, goal: goal.id, adjusted: goal.id !== d.goal };
   },
-  /* Форма калькулятора + результат. m — объект kbju из профиля. */
+  /* Форма калькулятора. Поля ввода рисуются один раз, при вводе обновляется
+     только блок результата — иначе поле теряло бы фокус на каждом символе. */
   kbjuForm(m, opts) {
-    const r = NC.kbjuCalc(m.calc || {});
     const c = m.calc || {};
     const sexBtn = (id, label) => `<button type="button" class="chip ${c.sex === id ? 'on' : ''}" data-calc-sex="${id}">${label}</button>`;
     return `<div class="calc">
@@ -142,42 +142,65 @@ const NC = {
       <span class="mono">Цель</span>
       <div class="chips">${NC.GOALS.map(g =>
         `<button type="button" class="chip ${c.goal === g.id ? 'on' : ''}" data-calc-goal="${g.id}">${g.label}</button>`).join('')}</div>
-      ${r ? `
-        <div class="calc-out">
-          <div class="calc-main"><b>${r.kcal}</b><s>ккал в день</s></div>
-          <div class="calc-macros">
-            <span><b>${r.p}</b><s>белки, г</s></span>
-            <span><b>${r.f}</b><s>жиры, г</s></span>
-            <span><b>${r.c}</b><s>углеводы, г</s></span>
-          </div>
-          <div class="calc-note">
-            ${r.perWeek ? `<span>При такой норме вес будет меняться примерно на <b>${Math.abs(r.perWeek)} кг в неделю</b> — это около ${Math.abs(+(r.perWeek * 4.3).toFixed(1))} кг в месяц.</span>`
-              : '<span>Эта норма рассчитана на удержание текущего веса.</span>'}
-            <span class="muted">Основной обмен ${r.bmr} ккал, расход с активностью ${r.tdee} ккал. Индекс массы тела ${r.bmi}.</span>
-          </div>
-          ${r.warn ? `<div class="calc-warn">${NC.esc(r.warn)}</div>` : ''}
-          <button type="button" class="btn sm" data-calc-apply style="align-self:flex-start">${NC.esc((opts && opts.applyLabel) || 'Использовать эти цифры')}</button>
-        </div>`
-        : '<span class="q-note">Заполните возраст, рост и вес — расчёт появится здесь.</span>'}
+      <div data-calc-res>${NC.kbjuResult(m, opts)}</div>
       <span class="q-note">Расчёт ориентировочный: формула Миффлина–Сан Жеора не учитывает состав тела и состояние здоровья. Если есть хронические заболевания, беременность или наблюдение у специалиста — опирайтесь на его рекомендации.</span>
     </div>`;
   },
-  /* обработчики калькулятора; onChange вызывается после каждого изменения */
+  /* только блок результата — его и перерисовываем при вводе */
+  kbjuResult(m, opts) {
+    const r = NC.kbjuCalc(m.calc || {});
+    if (!r) return '<span class="q-note">Заполните возраст, рост и вес — расчёт появится здесь.</span>';
+    return `<div class="calc-out">
+      <div class="calc-main"><b>${r.kcal}</b><s>ккал в день</s></div>
+      <div class="calc-macros">
+        <span><b>${r.p}</b><s>белки, г</s></span>
+        <span><b>${r.f}</b><s>жиры, г</s></span>
+        <span><b>${r.c}</b><s>углеводы, г</s></span>
+      </div>
+      <div class="calc-note">
+        ${r.perWeek ? `<span>При такой норме вес будет меняться примерно на <b>${Math.abs(r.perWeek)} кг в неделю</b> — это около ${Math.abs(+(r.perWeek * 4.3).toFixed(1))} кг в месяц.</span>`
+          : '<span>Эта норма рассчитана на удержание текущего веса.</span>'}
+        <span class="muted">Основной обмен ${r.bmr} ккал, расход с активностью ${r.tdee} ккал. Индекс массы тела ${r.bmi}.</span>
+      </div>
+      ${r.warn ? `<div class="calc-warn">${NC.esc(r.warn)}</div>` : ''}
+      <button type="button" class="btn sm" data-calc-apply style="align-self:flex-start">${NC.esc((opts && opts.applyLabel) || 'Использовать эти цифры')}</button>
+    </div>`;
+  },
+  /* onChange(result) — вызывается ТОЛЬКО при нажатии «использовать».
+     onDirty() — при любом изменении, без перерисовки. */
   bindCalc(host, m, onChange, opts) {
     const calc = m.calc || (m.calc = {});
-    const upd = (r) => onChange && onChange(r);
-    host.querySelectorAll('[data-calc]').forEach(el => el.oninput = () => { calc[el.dataset.calc] = el.value; upd(); });
-    host.querySelectorAll('[data-calc-sex]').forEach(b => b.onclick = () => { calc.sex = b.dataset.calcSex; upd(); });
-    host.querySelectorAll('[data-calc-act]').forEach(b => b.onclick = () => { calc.activity = b.dataset.calcAct; upd(); });
-    host.querySelectorAll('[data-calc-goal]').forEach(b => b.onclick = () => { calc.goal = b.dataset.calcGoal; upd(); });
-    const ap = host.querySelector('[data-calc-apply]');
-    if (ap) ap.onclick = () => {
-      const r = NC.kbjuCalc(calc);
-      if (!r) return NC.toast('Заполните возраст, рост и вес');
-      m.on = true; m.kcal = r.kcal; m.p = r.p; m.f = r.f; m.c = r.c; m.mode = 'manual';
-      if (!(opts && opts.silent)) NC.toast('Норма подставлена');
-      upd(r);
+    const box = host.querySelector('[data-calc-res]');
+
+    const redraw = () => {
+      if (!box) return;
+      box.innerHTML = NC.kbjuResult(m, opts);
+      const ap = box.querySelector('[data-calc-apply]');
+      if (ap) ap.onclick = () => {
+        const r = NC.kbjuCalc(calc);
+        if (!r) return NC.toast('Заполните возраст, рост и вес');
+        m.on = true; m.kcal = r.kcal; m.p = r.p; m.f = r.f; m.c = r.c; m.mode = 'manual';
+        if (!(opts && opts.silent)) NC.toast('Норма подставлена');
+        if (onChange) onChange(r);
+      };
+      if (opts && opts.onDirty) opts.onDirty();
     };
+
+    host.querySelectorAll('[data-calc]').forEach(el => el.oninput = () => {
+      calc[el.dataset.calc] = el.value;
+      redraw();                                   // поле ввода не трогаем — фокус остаётся
+    });
+    const pick = (sel, field) => host.querySelectorAll(sel).forEach(b => b.onclick = () => {
+      const group = b.parentElement;
+      group.querySelectorAll('.chip').forEach(x => x.classList.remove('on'));
+      b.classList.add('on');
+      calc[field] = b.dataset[field === 'activity' ? 'calcAct' : field === 'goal' ? 'calcGoal' : 'calcSex'];
+      redraw();
+    });
+    pick('[data-calc-sex]', 'sex');
+    pick('[data-calc-act]', 'activity');
+    pick('[data-calc-goal]', 'goal');
+    redraw();
   },
   stars(value, dishId, date) {
     return `<div class="stars" data-stars="${dishId}" data-date="${date || ''}">` +

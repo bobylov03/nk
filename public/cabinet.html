@@ -429,7 +429,8 @@ function wire() {
       state.dirty = true; render();
     });
     const cf = document.querySelector('.calc');
-    if (cf) NC.bindCalc(cf, p.kbju, () => { state.dirty = true; render(); });
+    if (cf) NC.bindCalc(cf, p.kbju, () => { state.dirty = true; render(); },
+      { onDirty: () => { state.dirty = true; } });   // ввод помечает изменения, но не перерисовывает
     const sl = document.querySelector('[data-slot]');
     if (sl) sl.querySelectorAll('.chip').forEach(b => b.onclick = () => {
       sl.querySelectorAll('.chip').forEach(x => x.classList.remove('on'));
