@@ -560,3 +560,9 @@ textarea{min-height:82px;resize:vertical;font-family:var(--sans);line-height:1.5
   .tile-card figcaption .serif{font-size:16px}
   .heart{width:34px;height:34px;font-size:14px;top:8px;right:8px}
 }
+
+/* кнопка под лентой коллекции */
+.coll-cta{align-self:flex-start;white-space:nowrap}
+@media (max-width:760px){
+  .coll-cta{align-self:stretch;justify-content:center}
+}
