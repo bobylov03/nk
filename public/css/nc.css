@@ -526,20 +526,37 @@ textarea{min-height:82px;resize:vertical;font-family:var(--sans);line-height:1.5
   background:rgba(184,150,102,.14);border:1px solid var(--gold-solid);font-size:12.5px}
 .chef-note{display:flex;flex-direction:column;gap:8px;padding:18px 20px;border-radius:var(--r);background:var(--plum)}
 
-/* блок-превью на главной */
-.coll-strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
-.coll-strip a{border:0;display:block}
+/* блок-превью на главной: горизонтальная лента */
+.coll-strip{display:flex;gap:14px;overflow-x:auto;scroll-snap-type:x mandatory;
+  padding:2px 0 10px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.coll-strip::-webkit-scrollbar{display:none}
+.coll-strip a{border:0;display:block;flex:0 0 auto;scroll-snap-align:start;
+  width:clamp(150px,20vw,220px)}
 .coll-strip .ph{width:100%;aspect-ratio:1;border-radius:var(--tile-r);background:var(--silk) center/cover no-repeat;
-  border:1px solid var(--gold);transition:transform .22s ease}
-.coll-strip a:hover .ph{transform:translateY(-4px)}
+  border:1px solid var(--gold);transition:transform .22s ease,box-shadow .22s ease}
+.coll-strip a:hover .ph{transform:translateY(-4px);box-shadow:0 14px 30px rgba(74,36,61,.16)}
 
-@media (max-width:1000px){.coll-strip{grid-template-columns:repeat(3,minmax(0,1fr))}}
+/* стрелки — только там, где есть мышь */
+.strip-nav{display:none;gap:8px}
+@media (hover:hover) and (min-width:761px){
+  .strip-nav{display:flex}
+}
+.strip-nav button{width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:transparent;
+  cursor:pointer;color:var(--plum);font-size:15px;line-height:1}
+.strip-nav button:hover{background:var(--plum);color:var(--champagne)}
+.strip-nav button:disabled{opacity:.3;cursor:default}
+.strip-nav button:disabled:hover{background:transparent;color:var(--plum)}
+
+/* лента идёт до края экрана — так видно, что её можно листать */
+@media (max-width:760px){
+  .coll-strip{margin:0 -20px;padding-left:20px;padding-right:20px}
+  .coll-strip a{width:clamp(138px,42vw,180px)}
+}
+
 @media (max-width:760px){
   .coll-head{padding:34px 20px 20px}
   .coll-wrap{padding:0 20px 46px;gap:18px}
   .coll-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
   .tile-card figcaption .serif{font-size:16px}
-  .coll-strip{grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
   .heart{width:34px;height:34px;font-size:14px;top:8px;right:8px}
 }
-@media (max-width:420px){.coll-strip{grid-template-columns:repeat(2,minmax(0,1fr))}}

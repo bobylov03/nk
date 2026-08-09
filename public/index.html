@@ -125,7 +125,13 @@
       <span class="mono">Портфолио</span>
       <h2 class="h-sec">Коллекция блюд</h2>
     </div>
-    <a class="btn ghost" href="/collection.html" style="white-space:nowrap">Смотреть коллекцию</a>
+    <div class="row" style="gap:10px">
+      <div class="strip-nav" id="strip-nav">
+        <button id="strip-prev" aria-label="Предыдущие блюда">‹</button>
+        <button id="strip-next" aria-label="Следующие блюда">›</button>
+      </div>
+      <a class="btn ghost" href="/collection.html" style="white-space:nowrap">Смотреть коллекцию</a>
+    </div>
   </div>
   <div class="coll-strip" id="coll-strip"></div>
 </div>
@@ -336,13 +342,28 @@
   // коллекция: только фотографии, подробности — на отдельной странице
   const strip = all.filter(d => d.img).slice(0, 8);
   const box = document.getElementById('coll-strip');
-  if (strip.length) {
+  if (!strip.length) {
+    document.getElementById('collection').hidden = true;
+  } else {
     box.innerHTML = strip.map(d => `
       <a href="/collection.html" aria-label="${NC.esc(d.name)}" title="${NC.esc(d.name)}">
         <div class="ph" style="background-image:url('/img/${NC.esc(d.img)}')"></div>
       </a>`).join('');
-  } else {
-    document.getElementById('collection').hidden = true;
+
+    const prev = document.getElementById('strip-prev'), next = document.getElementById('strip-next');
+    const step = () => (box.firstElementChild ? box.firstElementChild.offsetWidth + 14 : 200);
+    const sync = () => {
+      const max = box.scrollWidth - box.clientWidth - 2;
+      prev.disabled = box.scrollLeft <= 2;
+      next.disabled = box.scrollLeft >= max;
+      // если всё влезло на экран, стрелки не нужны
+      document.getElementById('strip-nav').style.display = max > 4 ? '' : 'none';
+    };
+    prev.onclick = () => box.scrollBy({ left: -step() * 2, behavior: 'smooth' });
+    next.onclick = () => box.scrollBy({ left: step() * 2, behavior: 'smooth' });
+    box.addEventListener('scroll', sync, { passive: true });
+    addEventListener('resize', sync);
+    sync();
   }
 })();
 </script>
