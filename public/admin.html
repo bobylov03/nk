@@ -48,7 +48,7 @@
 const CATS = [['breakfast', 'Завтрак'], ['lunch', 'Обед'], ['dinner', 'Ужин'], ['snack', 'Перекус']];
 const catLabel = (id) => (CATS.find(c => c[0] === id) || [, '—'])[1];
 const state = {
-  dossier: null, sec: 'dash', s: null, cat: 'all', q: '', form: 'smart', smart: '', ing: '', bulk: '', drag: null };
+  dossier: null, promoEdit: null, sec: 'dash', s: null, cat: 'all', q: '', form: 'smart', smart: '', ing: '', bulk: '', drag: null };
 const $ = (id) => document.getElementById(id);
 
 $('enter').onclick = async () => {
@@ -291,6 +291,14 @@ function formNew() {
 }
 
 /* ---------- тарифы, клиенты, заказы, контент ---------- */
+/* промокоды редактируются массивом: две новые пустые строки не схлопываются */
+function promoList() {
+  if (!state.promoEdit) {
+    state.promoEdit = Object.entries(state.s.promos || {}).map(([code, discount]) => ({ code, discount }));
+  }
+  return state.promoEdit;
+}
+
 function plans() {
   return `<div class="grid" style="grid-template-columns:repeat(3,minmax(0,1fr))">${state.s.tariffs.map(t => `
     <div class="card col" style="gap:14px">
@@ -327,6 +335,39 @@ function plans() {
       <div class="row" style="gap:9px">
         <button class="btn ghost sm" id="slot-add">Добавить окно</button>
         <button class="btn sm" id="slot-save">Сохранить окна</button>
+      </div>
+    </div>
+
+    <div class="card col" style="gap:12px;margin-top:20px">
+      <span class="serif" style="font-size:22px">Резервная копия</span>
+      <span class="muted" style="font-size:12.5px;line-height:1.6">Скачивает всё: блюда, меню, клиентов, заказы, отзывы и тексты сайта. Делайте копию перед крупными изменениями — восстановление полностью заменит текущие данные.</span>
+      <div class="row" style="gap:9px;flex-wrap:wrap">
+        <button class="btn sm" id="backup-get">Скачать копию</button>
+        <button class="btn ghost sm" id="backup-put">Восстановить из файла</button>
+        <input type="file" id="backup-file" accept="application/json" style="display:none">
+      </div>
+    </div>
+
+    <div class="card col" style="gap:14px;margin-top:20px">
+      <div class="row" style="justify-content:space-between;align-items:baseline">
+        <span class="serif" style="font-size:22px">Промокоды</span>
+        <span class="muted" style="font-size:12.5px">Клиент вводит код в конце анкеты</span>
+      </div>
+      <div class="col" style="gap:9px">
+        ${promoList().map((pr, i) => `
+          <div class="row" style="gap:10px" data-promo-i="${i}">
+            <input data-promo="${i}:code" value="${NC.esc(pr.code)}" placeholder="NCSTART" style="flex:1;text-transform:uppercase;font-family:var(--mono);font-size:12.5px">
+            <label style="flex-direction:row;align-items:center;gap:7px;flex:0 0 auto">
+              <span class="muted" style="font-size:12px">скидка</span>
+              <input data-promo="${i}:discount" value="${pr.discount}" inputmode="numeric" style="width:64px;text-align:right;font-family:var(--mono);font-size:12px">
+              <span class="muted" style="font-size:12px">%</span>
+            </label>
+            <button class="chip" data-promo-del="${i}" title="Удалить">×</button>
+          </div>`).join('') || '<span class="muted" style="font-size:13px">Промокодов пока нет</span>'}
+      </div>
+      <div class="row" style="gap:9px">
+        <button class="btn ghost sm" id="promo-add">Добавить код</button>
+        <button class="btn sm" id="promo-save">Сохранить коды</button>
       </div>
     </div>`;
 }
@@ -498,13 +539,18 @@ function reviews() {
 function orders() {
   const S = { pending: 'На согласовании', approved: 'Подтверждена', paid: 'Оплачена', rejected: 'Отклонена' };
   return `<div class="card" style="padding:0;overflow:hidden"><table>
-    <thead><tr><th>Заявка</th><th>Клиент</th><th>Рацион</th><th>Адрес</th><th>Сумма</th><th>Статус</th><th></th></tr></thead>
+    <thead><tr><th>Заявка</th><th>Клиент</th><th>Рацион</th><th>Адрес</th><th>Промокод</th><th>Сумма</th><th>Статус</th><th></th></tr></thead>
     <tbody>${state.s.orders.map(o => `<tr>
       <td class="mono" style="letter-spacing:.05em">${o.id}</td>
       <td><div class="col" style="gap:2px"><span>${NC.esc(o.name)}</span><span class="muted" style="font-size:11px">${NC.esc(o.phone)}</span></div></td>
       <td>${o.planDays} дней · ${o.meals} приёма${o.exclude && o.exclude.length ? '<br><span class="muted" style="font-size:11px">без ' + NC.esc(o.exclude.join(', ').toLowerCase()) + '</span>' : ''}</td>
       <td class="muted">${NC.esc(o.address)}${o.flat ? ', ' + NC.esc(o.flat) : ''}</td>
-      <td>${NC.money(o.sum)}</td>
+      <td>${o.promo
+        ? (o.promoDiscount
+            ? `<span class="badge" style="background:rgba(184,150,102,.18)">${NC.esc(o.promo)} · −${o.promoDiscount}%</span>`
+            : `<span class="badge" style="background:rgba(122,59,59,.12);color:#7a3b3b" title="Код не найден — скидка не применена">${NC.esc(o.promo)} · не сработал</span>`)
+        : '<span class="muted">—</span>'}</td>
+      <td>${o.promoDiscount ? `<div class="col" style="gap:1px"><span>${NC.money(o.sum)}</span><span class="muted" style="font-size:10.5px;text-decoration:line-through">${NC.money(o.sumFull || o.sum)}</span></div>` : NC.money(o.sum)}</td>
       <td><span class="badge">${S[o.status] || o.status}</span></td>
       <td style="text-align:right;white-space:nowrap">
         ${o.status === 'pending' ? `<button class="btn sm" data-ok="order:${o.id}">Подтвердить</button> <button class="chip" data-no="order:${o.id}">×</button>` : ''}
@@ -623,6 +669,58 @@ function wire() {
     try {
       await NC.api('/api/slots', { method: 'PUT', body: { slots: readSlots() } });
       NC.toast('Окна доставки сохранены'); reload();
+    } catch (e) { NC.toast(e.message); }
+  };
+
+  const readPromos = () => {
+    const out = [];
+    document.querySelectorAll('[data-promo-i]').forEach(row => {
+      const i = row.dataset.promoI;
+      const g = (f) => row.querySelector(`[data-promo="${i}:${f}"]`);
+      out.push({ code: g('code').value, discount: +g('discount').value || 0 });
+    });
+    return out;
+  };
+  const bget = $('backup-get');
+  if (bget) bget.onclick = async () => {
+    try {
+      const r = await NC.api('/api/admin/backup');
+      const blob = new Blob([JSON.stringify(r.backup, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'nc-meals-' + r.at.slice(0, 10) + '.json';
+      a.click();
+      URL.revokeObjectURL(a.href);
+      NC.toast('Копия скачана');
+    } catch (e) { NC.toast(e.message); }
+  };
+  const bput = $('backup-put'), bfile = $('backup-file');
+  if (bput) bput.onclick = () => bfile.click();
+  if (bfile) bfile.onchange = async () => {
+    const f = bfile.files[0];
+    if (!f) return;
+    if (!confirm('Восстановление полностью заменит текущие данные: блюда, меню, клиентов и заказы. Продолжить?')) { bfile.value = ''; return; }
+    try {
+      const backup = JSON.parse(await f.text());
+      const r = await NC.api('/api/admin/restore', { method: 'POST', body: { backup } });
+      NC.toast('Восстановлено: ' + r.dishes + ' блюд, ' + r.clients + ' клиентов');
+      reload();
+    } catch (e) { NC.toast(e.message || 'Не удалось прочитать файл'); }
+    bfile.value = '';
+  };
+
+  const padd = $('promo-add');
+  if (padd) padd.onclick = () => { state.promoEdit = readPromos().concat([{ code: '', discount: 10 }]); render(); };
+  document.querySelectorAll('[data-promo-del]').forEach(b => b.onclick = () => {
+    const list = readPromos(); list.splice(+b.dataset.promoDel, 1);
+    state.promoEdit = list; render();
+  });
+  const psave = $('promo-save');
+  if (psave) psave.onclick = async () => {
+    try {
+      await NC.api('/api/promos', { method: 'PUT', body: { promos: readPromos() } });
+      state.promoEdit = null;                       // подтянем сохранённые с сервера
+      NC.toast('Промокоды сохранены'); reload();
     } catch (e) { NC.toast(e.message); }
   };
 

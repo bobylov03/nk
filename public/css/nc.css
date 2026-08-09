@@ -11,7 +11,7 @@
   --r:16px;
   --shadow:0 4px 16px rgba(74,36,61,.09);
   --tile-r:22px;
-  --hero-r:32px;             /* скругление фото на главном экране — см. compare-radius.html */
+  --hero-r:32px;             /* скругление фото на главном экране */
   --gold-solid:#b89666;
   --serif:'Cormorant Garamond',Georgia,serif;
   --sans:'Jost',system-ui,sans-serif;
@@ -483,3 +483,9 @@ textarea{min-height:82px;resize:vertical;font-family:var(--sans);line-height:1.5
   .modal{padding:0;align-items:flex-end}
   .modal-in{max-width:100%;max-height:94svh;border-radius:22px 22px 0 0;padding:18px 16px 26px}
 }
+
+/* применённый промокод */
+.promo-ok{display:flex;align-items:center;gap:11px;padding:12px 14px;border-radius:12px;
+  background:rgba(184,150,102,.13);border:1px solid var(--gold-solid)}
+.promo-ok b{font-family:var(--serif);font-weight:500;font-size:21px;line-height:1;flex:0 0 auto}
+.promo-ok span{font-size:12.5px;line-height:1.5}

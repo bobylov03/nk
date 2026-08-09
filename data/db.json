@@ -1,6 +1,6 @@
 {
   "admin": {
-    "password": "nc2026"
+    "password": "CHANGE_ME_IN_NETLIFY_ENV"
   },
   "content": {
     "hero_kicker": "MEALS MADE AROUND YOU",
@@ -42,13 +42,13 @@
     "reviews_title": "Что говорят о блюдах",
     "reviews_note": "Отзывы клиентов из личного кабинета — публикуем с их согласия.",
     "hero_photos": "food-toast.jpg, food-boul.jpg, food-meatballs.jpg",
-    "social_tg": "https://t.me/ncmeals",
-    "social_ig": "https://instagram.com/ncmeals",
-    "social_wa": "https://wa.me/995555123456",
-    "social_tt": "https://tiktok.com/@ncmeals",
-    "live_clients": "11",
-    "live_slots": "3",
-    "live_start": "18 августа",
+    "social_tg": "",
+    "social_ig": "",
+    "social_wa": "",
+    "social_tt": "",
+    "live_clients": "",
+    "live_slots": "",
+    "live_start": "",
     "live_note": "Показывается на главной. Пустое поле — блок скрыт.",
     "hero_badges": "👨‍🍳 Персональный рацион\n🥗 Новое меню каждые 10 дней\n🚚 Доставка по Тбилиси\n📊 Индивидуальное КБЖУ",
     "cycle_title": "Рацион завершён",
@@ -269,458 +269,93 @@
     }
   ],
   "menu": {
-    "2026-07-26": {
-      "breakfast": "d02",
+    "2026-08-09": {
+      "breakfast": "d01",
       "lunch": "d04",
-      "dinner": "d06",
+      "dinner": "d05",
       "snack": "d08"
     },
-    "2026-07-27": {
+    "2026-08-10": {
       "breakfast": "d01",
-      "lunch": "d03",
-      "dinner": "d05",
-      "snack": "d07"
-    },
-    "2026-07-28": {
-      "breakfast": "d02",
       "lunch": "d04",
-      "dinner": "d06",
+      "dinner": "d05",
       "snack": "d08"
     },
-    "2026-07-29": {
+    "2026-08-11": {
       "breakfast": "d01",
-      "lunch": "d03",
-      "dinner": "d05",
-      "snack": "d07"
-    },
-    "2026-07-30": {
-      "breakfast": "d02",
       "lunch": "d04",
-      "dinner": "d06",
+      "dinner": "d05",
       "snack": "d08"
     },
-    "2026-07-31": {
+    "2026-08-12": {
       "breakfast": "d01",
-      "lunch": "d03",
-      "dinner": "d05",
-      "snack": "d07"
-    },
-    "2026-08-01": {
-      "breakfast": "d02",
       "lunch": "d04",
-      "dinner": "d06",
+      "dinner": "d05",
       "snack": "d08"
     },
-    "2026-08-02": {
+    "2026-08-13": {
       "breakfast": "d01",
-      "lunch": "d03",
-      "dinner": "d05",
-      "snack": "d07"
-    },
-    "2026-08-03": {
-      "breakfast": "d02",
       "lunch": "d04",
-      "dinner": "d06",
+      "dinner": "d05",
       "snack": "d08"
     },
-    "2026-08-04": {
+    "2026-08-14": {
       "breakfast": "d01",
-      "lunch": "d03",
-      "dinner": "d05",
-      "snack": "d07"
-    },
-    "2026-08-05": {
-      "breakfast": "d02",
       "lunch": "d04",
-      "dinner": "d06",
+      "dinner": "d05",
       "snack": "d08"
     },
-    "2026-08-06": {
+    "2026-08-15": {
       "breakfast": "d01",
-      "lunch": "d03",
-      "dinner": "d05",
-      "snack": "d07"
-    },
-    "2026-08-07": {
-      "breakfast": "d02",
       "lunch": "d04",
-      "dinner": "d06",
+      "dinner": "d05",
       "snack": "d08"
     },
-    "2026-08-08": {
+    "2026-08-16": {
       "breakfast": "d01",
-      "lunch": "d03",
+      "lunch": "d04",
       "dinner": "d05",
-      "snack": "d07"
+      "snack": "d08"
+    },
+    "2026-08-17": {
+      "breakfast": "d01",
+      "lunch": "d04",
+      "dinner": "d05",
+      "snack": "d08"
+    },
+    "2026-08-18": {
+      "breakfast": "d01",
+      "lunch": "d04",
+      "dinner": "d05",
+      "snack": "d08"
+    },
+    "2026-08-19": {
+      "breakfast": "d01",
+      "lunch": "d04",
+      "dinner": "d05",
+      "snack": "d08"
+    },
+    "2026-08-20": {
+      "breakfast": "d01",
+      "lunch": "d04",
+      "dinner": "d05",
+      "snack": "d08"
+    },
+    "2026-08-21": {
+      "breakfast": "d01",
+      "lunch": "d04",
+      "dinner": "d05",
+      "snack": "d08"
+    },
+    "2026-08-22": {
+      "breakfast": "d01",
+      "lunch": "d04",
+      "dinner": "d05",
+      "snack": "d08"
     }
   },
-  "clients": [
-    {
-      "id": "c981b560b",
-      "name": "dsadsa",
-      "phone": "213213",
-      "address": "sadsa, 12",
-      "slot": "s1",
-      "notes": "",
-      "planDays": 7,
-      "daysLeft": 7,
-      "paused": false,
-      "history": [
-        {
-          "title": "NC · 7 дней",
-          "meta": "29.07.2026 · 3 приёма",
-          "sum": 406
-        }
-      ],
-      "profile": {
-        "goals": [],
-        "medical": [],
-        "medicalNote": "",
-        "dislikes": [],
-        "dislikesNote": "",
-        "likes": [],
-        "likesNote": "",
-        "never": "",
-        "meals": 4,
-        "soups": "Иногда",
-        "cuisine": "Смешанная",
-        "favDishes": "",
-        "kbju": {
-          "on": false,
-          "kcal": 0,
-          "p": 0,
-          "f": 0,
-          "c": 0,
-          "note": ""
-        },
-        "priorities": [],
-        "delivery": {
-          "address": "sadsa, 12",
-          "entrance": "",
-          "floor": "",
-          "intercom": "",
-          "note": "",
-          "slot": "s1"
-        },
-        "extra": "",
-        "weight": "",
-        "portion": "обычная",
-        "diet": "omnivore",
-        "dietNote": "",
-        "persons": 1,
-        "weekdays": [
-          1,
-          2,
-          3,
-          4,
-          5,
-          6,
-          7
-        ],
-        "slotNote": ""
-      },
-      "photo": "",
-      "chefNote": {
-        "date": "",
-        "text": ""
-      },
-      "log": [],
-      "chefComments": [],
-      "cycleStart": "",
-      "cycleDone": false
-    },
-    {
-      "id": "c01",
-      "name": "Нино Церетели",
-      "phone": "+995 555 12 34 56",
-      "address": "Ваке, ул. Абашидзе 24, кв. 12",
-      "slot": "s1",
-      "notes": "без свинины",
-      "planDays": 14,
-      "daysLeft": 9,
-      "paused": false,
-      "norms": {
-        "kcal": 1900,
-        "p": 130,
-        "f": 70,
-        "c": 210
-      },
-      "history": [
-        {
-          "title": "NC · 14 дней",
-          "meta": "28 июля · 4 приёма",
-          "sum": 756
-        },
-        {
-          "title": "NC · 7 дней",
-          "meta": "20 июля · 4 приёма",
-          "sum": 406
-        }
-      ],
-      "profile": {
-        "goals": [
-          "Больше энергии",
-          "Улучшить пищевые привычки"
-        ],
-        "medical": [
-          "аллергии"
-        ],
-        "medicalNote": "Лёгкая аллергия на цитрусовые.",
-        "dislikes": [
-          "грибы",
-          "кинза"
-        ],
-        "dislikesNote": "",
-        "likes": [
-          "рыба",
-          "морепродукты",
-          "авокадо"
-        ],
-        "likesNote": "",
-        "never": "Свинина в любом виде.",
-        "meals": 4,
-        "soups": "Да",
-        "cuisine": "Средиземноморская",
-        "favDishes": "Лосось на гриле, овощные боулы.",
-        "kbju": {
-          "on": false,
-          "kcal": 0,
-          "p": 0,
-          "f": 0,
-          "c": 0,
-          "note": ""
-        },
-        "priorities": [
-          "вкус",
-          "разнообразие",
-          "красивые блюда"
-        ],
-        "delivery": {
-          "address": "Ваке, ул. Абашидзе 24, кв. 12",
-          "entrance": "",
-          "floor": "",
-          "intercom": "",
-          "note": "",
-          "slot": "s1"
-        },
-        "extra": "",
-        "weight": "58",
-        "portion": "обычная",
-        "diet": "pescatarian",
-        "dietNote": "",
-        "persons": 1,
-        "weekdays": [
-          1,
-          2,
-          3,
-          4,
-          5,
-          6,
-          7
-        ],
-        "slotNote": ""
-      },
-      "photo": "",
-      "chefNote": {
-        "date": "",
-        "text": ""
-      },
-      "log": [],
-      "chefComments": [],
-      "cycleStart": "2026-07-17",
-      "cycleDone": false
-    },
-    {
-      "id": "c02",
-      "name": "Давид Капанадзе",
-      "phone": "+995 555 90 11 22",
-      "address": "Сабуртало, ул. Пекини 7",
-      "slot": "s2",
-      "notes": "",
-      "planDays": 30,
-      "daysLeft": 21,
-      "paused": false,
-      "history": [],
-      "profile": {
-        "goals": [],
-        "medical": [],
-        "medicalNote": "",
-        "dislikes": [],
-        "dislikesNote": "",
-        "likes": [],
-        "likesNote": "",
-        "never": "",
-        "meals": 4,
-        "soups": "Иногда",
-        "cuisine": "Смешанная",
-        "favDishes": "",
-        "kbju": {
-          "on": false,
-          "kcal": 0,
-          "p": 0,
-          "f": 0,
-          "c": 0,
-          "note": ""
-        },
-        "priorities": [],
-        "delivery": {
-          "address": "Сабуртало, ул. Пекини 7",
-          "entrance": "",
-          "floor": "",
-          "intercom": "",
-          "note": "",
-          "slot": "s2"
-        },
-        "extra": "",
-        "weight": "",
-        "portion": "обычная",
-        "diet": "omnivore",
-        "dietNote": "",
-        "persons": 1,
-        "weekdays": [
-          1,
-          2,
-          3,
-          4,
-          5,
-          6,
-          7
-        ],
-        "slotNote": ""
-      },
-      "photo": "",
-      "chefNote": {
-        "date": "",
-        "text": ""
-      },
-      "log": [],
-      "chefComments": [],
-      "cycleStart": "",
-      "cycleDone": false
-    },
-    {
-      "id": "c03",
-      "name": "Мари Гвазава",
-      "phone": "+995 555 44 55 66",
-      "address": "Ваке, ул. Чавчавадзе 41",
-      "slot": "s2",
-      "notes": "аллергия: орехи",
-      "planDays": 7,
-      "daysLeft": 2,
-      "paused": true,
-      "history": [],
-      "profile": {
-        "goals": [],
-        "medical": [],
-        "medicalNote": "",
-        "dislikes": [],
-        "dislikesNote": "",
-        "likes": [],
-        "likesNote": "",
-        "never": "",
-        "meals": 4,
-        "soups": "Иногда",
-        "cuisine": "Смешанная",
-        "favDishes": "",
-        "kbju": {
-          "on": false,
-          "kcal": 0,
-          "p": 0,
-          "f": 0,
-          "c": 0,
-          "note": ""
-        },
-        "priorities": [],
-        "delivery": {
-          "address": "Ваке, ул. Чавчавадзе 41",
-          "entrance": "",
-          "floor": "",
-          "intercom": "",
-          "note": "",
-          "slot": "s2"
-        },
-        "extra": "",
-        "weight": "",
-        "portion": "обычная",
-        "diet": "omnivore",
-        "dietNote": "",
-        "persons": 1,
-        "weekdays": [
-          1,
-          2,
-          3,
-          4,
-          5,
-          6,
-          7
-        ],
-        "slotNote": ""
-      },
-      "photo": "",
-      "chefNote": {
-        "date": "",
-        "text": ""
-      },
-      "log": [],
-      "chefComments": [],
-      "cycleStart": "",
-      "cycleDone": false
-    }
-  ],
-  "orders": [
-    {
-      "id": "o4002eca7",
-      "status": "paid",
-      "createdAt": "2026-07-29T18:30:30.826Z",
-      "name": "dsadsa",
-      "phone": "213213",
-      "address": "sadsa",
-      "flat": "12",
-      "slot": "s1",
-      "note": "",
-      "tariffId": "t7",
-      "planDays": 7,
-      "meals": 3,
-      "exclude": [],
-      "promo": "",
-      "sum": 406,
-      "decidedAt": "2026-07-29T18:31:58.868Z",
-      "pay": "cash",
-      "paidAt": "2026-07-29T18:32:12.382Z",
-      "clientId": "c981b560b"
-    },
-    {
-      "id": "o01",
-      "status": "pending",
-      "createdAt": "2026-07-29T13:03:11.269Z",
-      "name": "Леван Бахтадзе",
-      "phone": "+995 555 77 88 99",
-      "address": "Мтацминда, ул. Бесики 3",
-      "flat": "кв. 5",
-      "slot": "s2",
-      "note": "код домофона 12К",
-      "tariffId": "t14",
-      "planDays": 14,
-      "meals": 4,
-      "exclude": [
-        "Глютен"
-      ],
-      "sum": 756
-    }
-  ],
-  "requests": [
-    {
-      "id": "r01",
-      "clientId": "c01",
-      "client": "Нино Церетели",
-      "type": "swap",
-      "status": "pending",
-      "date": "2026-07-30",
-      "cat": "dinner",
-      "dishId": "d06",
-      "text": "Запрос замены · Ужин → Курица терияки с рисом",
-      "createdAt": "2026-07-29T13:03:11.269Z"
-    }
-  ],
+  "clients": [],
+  "orders": [],
+  "requests": [],
   "ratings": []
 }
