@@ -3,7 +3,62 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
-<title>NC meals — рацион на каждый день</title>
+<title>NC meals — доставка готовых рационов питания по Тбилиси</title>
+<meta name="description" content="Персональный рацион на каждый день: четыре приёма пищи, новое меню каждые 10 дней, доставка по Тбилиси до 12:00. Учитываем аллергии, КБЖУ и продукты, которые вы не едите.">
+<link rel="canonical" href="https://ncmeals.ge/">
+<meta name="robots" content="index, follow">
+<meta name="theme-color" content="#4a243d">
+
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://ncmeals.ge/">
+<meta property="og:site_name" content="NC meals">
+<meta property="og:locale" content="ru_RU">
+<meta property="og:title" content="NC meals — доставка готовых рационов по Тбилиси">
+<meta property="og:description" content="Персональный рацион на каждый день. Новое меню каждые 10 дней, доставка по Тбилиси до 12:00.">
+<meta property="og:image" content="https://ncmeals.ge/img/food-toast.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="1200">
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="NC meals — доставка готовых рационов по Тбилиси">
+<meta name="twitter:description" content="Персональный рацион на каждый день. Новое меню каждые 10 дней, доставка по Тбилиси.">
+<meta name="twitter:image" content="https://ncmeals.ge/img/food-toast.jpg">
+
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/img/logo.jpg">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FoodEstablishment",
+  "@id": "https://ncmeals.ge/#business",
+  "name": "NC meals",
+  "description": "Доставка персональных рационов питания по Тбилиси. Меню составляется индивидуально с учётом аллергий, предпочтений и КБЖУ.",
+  "url": "https://ncmeals.ge/",
+  "image": "https://ncmeals.ge/img/food-toast.jpg",
+  "servesCuisine": ["Средиземноморская", "Европейская", "Азиатская", "Домашняя"],
+  "priceRange": "49–58 GEL в день",
+  "currenciesAccepted": "GEL",
+  "address": {
+    "@type": "PostalAddress",
+    "addressLocality": "Тбилиси",
+    "addressCountry": "GE"
+  },
+  "areaServed": {
+    "@type": "City",
+    "name": "Тбилиси"
+  },
+  "hasOfferCatalog": {
+    "@type": "OfferCatalog",
+    "name": "Тарифы рационов",
+    "itemListElement": [
+      { "@type": "Offer", "name": "Неделя — 7 дней", "price": "406", "priceCurrency": "GEL" },
+      { "@type": "Offer", "name": "Две недели — 14 дней", "price": "756", "priceCurrency": "GEL" },
+      { "@type": "Offer", "name": "Месяц — 30 дней", "price": "1470", "priceCurrency": "GEL" }
+    ]
+  }
+}
+</script>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=Jost:wght@300;400;500&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/css/nc.css">
@@ -14,6 +69,7 @@
   <a href="/" style="border:0" id="logo"></a>
   <nav id="nav-menu">
     <a href="#menu" style="border:0">Меню дня</a>
+    <a href="/collection.html" style="border:0">Коллекция</a>
     <a href="#how" style="border:0">Как это работает</a>
     <a href="#tariffs" style="border:0">Тарифы</a>
     <a href="#delivery" style="border:0">Доставка</a>
@@ -28,11 +84,11 @@
 
 <div class="hero">
   <div class="col" style="gap:22px">
-    <span class="mono" id="kicker"></span>
-    <h1 id="title"></h1>
-    <p id="text" style="margin:0;font-size:16px;line-height:1.6;max-width:30em"></p>
+    <span class="mono" id="kicker">MEALS MADE AROUND YOU</span>
+    <h1 id="title">Свежий рацион на каждый день, приготовленный под вас</h1>
+    <p id="text" style="margin:0;font-size:16px;line-height:1.6;max-width:30em">Четыре приёма пищи, новое меню каждые 10 дней, доставка по Тбилиси до 12:00.</p>
     <div class="row" style="gap:10px;flex-wrap:wrap">
-      <a class="btn" id="cta" href="/order.html" style="border:0"></a>
+      <a class="btn" id="cta" href="/order.html" style="border:0">Оформить рацион</a>
       <button class="btn ghost" id="calc-open">Рассчитать КБЖУ</button>
     </div>
     <div class="perks" id="perks"></div>
@@ -61,6 +117,17 @@
     <p class="muted" style="margin:0;font-size:15px;line-height:1.7;max-width:34em" id="about-text"></p>
     <span class="serif" style="font-size:20px" id="about-sign"></span>
   </div>
+</div>
+
+<div class="section" id="collection">
+  <div class="row" style="justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:16px">
+    <div class="col" style="gap:8px">
+      <span class="mono">Портфолио</span>
+      <h2 class="h-sec">Коллекция блюд</h2>
+    </div>
+    <a class="btn ghost" href="/collection.html" style="white-space:nowrap">Смотреть коллекцию</a>
+  </div>
+  <div class="coll-strip" id="coll-strip"></div>
 </div>
 
 <div class="section silk" id="how">
@@ -265,6 +332,18 @@
   const RU = { breakfast: 'Завтрак', lunch: 'Обед', dinner: 'Ужин', snack: 'Перекус' };
   const all = (await NC.api('/api/dishes')).dishes.map(d => Object.assign({}, d, { catLabel: RU[d.cat] }));
   bindSheet(document.getElementById('menu-grid'), all);
+
+  // коллекция: только фотографии, подробности — на отдельной странице
+  const strip = all.filter(d => d.img).slice(0, 8);
+  const box = document.getElementById('coll-strip');
+  if (strip.length) {
+    box.innerHTML = strip.map(d => `
+      <a href="/collection.html" aria-label="${NC.esc(d.name)}" title="${NC.esc(d.name)}">
+        <div class="ph" style="background-image:url('/img/${NC.esc(d.img)}')"></div>
+      </a>`).join('');
+  } else {
+    document.getElementById('collection').hidden = true;
+  }
 })();
 </script>
 </body>

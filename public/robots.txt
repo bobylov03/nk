@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /admin.html
+Disallow: /cabinet.html
+Disallow: /order.html
+Disallow: /api/
+
+Sitemap: https://ncmeals.ge/sitemap.xml

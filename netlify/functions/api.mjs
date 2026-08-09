@@ -26,7 +26,7 @@ const writeDb = (db) => store().setJSON('db', db);
 function migrate(db) {
   db.ratings = db.ratings || [];
   db.clients = (db.clients || []).map(c => ({
-    photo: '', log: [], chefComments: [], chefNote: { date: '', text: '' }, ...c,
+    photo: '', log: [], chefComments: [], favourites: [], chefNote: { date: '', text: '' }, ...c,
     profile: { diet: 'omnivore', dietNote: '', persons: 1, weekdays: [1,2,3,4,5,6,7], slotNote: '', ...(c.profile || {}) }
   }));
   db.slots = (db.slots || seed.slots).map(s => ({ extra: 0, custom: false, ...s }));

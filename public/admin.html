@@ -2,6 +2,8 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>NC meals — админ-панель</title>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -457,7 +459,21 @@ function dossierView() {
         </div>
 
         <div class="card col" style="gap:10px">
-          <span class="mono">Любимые блюда · ${d.loved.length}</span>
+          <span class="mono">Отмечено сердечком в коллекции · ${d.favourites.length}</span>
+          <span class="muted" style="font-size:11.5px;line-height:1.5">Клиент отметил эти блюда сам. «Ещё не пробовал» — блюдо в рационе пока не было, стоит учесть при сборке следующего цикла.</span>
+          ${d.favourites.length ? d.favourites.map(f => `<div class="row" style="gap:10px">
+            ${NC.tile(f.dish, 'sm')}
+            <span class="col" style="flex:1;gap:2px">
+              <span class="serif" style="font-size:16px">${NC.esc(f.dish.name)}</span>
+              <span class="muted" style="font-size:11px">${state.s.cats[f.dish.cat] || ''}${f.starred ? ' · ♥ вручную' : ''}</span>
+            </span>
+            <span style="font-size:11.5px;white-space:nowrap;color:${f.stars ? 'var(--gold-solid)' : 'var(--muted)'}">
+              ${f.stars ? '★'.repeat(f.stars) : 'ещё не пробовал'}</span>
+          </div>`).join('') : '<span class="muted" style="font-size:12.5px">Пока ничего не отмечено</span>'}
+        </div>
+
+        <div class="card col" style="gap:10px">
+          <span class="mono">Оценил на пять · ${d.loved.length}</span>
           ${d.loved.length ? d.loved.map(r => `<div class="row" style="gap:10px">
             ${NC.tile(r.dish, 'sm')}
             <span class="col" style="flex:1;gap:2px"><span class="serif" style="font-size:16px">${NC.esc(r.dish.name)}</span>

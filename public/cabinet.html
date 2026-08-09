@@ -2,6 +2,8 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <title>NC meals — моя кухня</title>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -73,7 +75,7 @@ function render() {
   const c = state.d.client;
   $('hello').textContent = c.kitchen;
   $('sub').textContent = 'NC · ' + c.planDays + ' дней · ' + NC.dateRu(state.d.today.date, { weekday: 'long', day: 'numeric', month: 'short' });
-  $('tabs').innerHTML = [['today', '◉', 'Сегодня'], ['tomorrow', '◐', 'Завтра'], ['collection', '❤', 'Коллекция'],
+  $('tabs').innerHTML = [['today', '◉', 'Сегодня'], ['tomorrow', '◐', 'Завтра'], ['collection', '❤', 'Фавориты'],
     ['stats', '▤', 'Статистика'], ['profile', '◇', 'Профиль']]
     .map(([id, ic, label]) => `<button class="${state.tab === id ? 'on' : ''}" data-tab="${id}"><span style="font-size:16px">${ic}</span>${label}</button>`).join('');
   document.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => { state.tab = b.dataset.tab; render(); });
@@ -253,26 +255,35 @@ function swapSheet() {
   </div>`;
 }
 
-/* ---------- вкладка «Коллекция» ---------- */
+/* ---------- вкладка «Мои фавориты» ---------- */
 function viewCollection() {
-  const items = state.d.collection || [];
+  const items = state.d.favourites || [];
   const rated = (state.d.ratings || []).filter(r => r.stars).length;
   return `<div class="col fade" style="gap:16px">
     <div class="col" style="gap:6px">
-      <span class="serif" style="font-size:22px">❤️ Моя коллекция</span>
-      <span class="q-note">Блюда, которым вы поставили пять звёзд или отметили как любимые.</span>
+      <span class="serif" style="font-size:22px">❤️ Мои фавориты</span>
+      <span class="q-note">Блюда, которые вы отметили сердечком в коллекции, а также те, что получили пять звёзд.</span>
     </div>
-    ${items.length ? `<div class="coll">${items.map(r => `
-      <div class="it" data-dish="${r.dish.id}">
-        <div class="ph" style="${r.dish.img ? `background-image:url('/img/${r.dish.img}')` : ''}"></div>
+    ${items.length ? `<div class="coll">${items.map(f => `
+      <div class="it" data-dish="${f.dish.id}">
+        <div class="ph" style="${f.dish.img ? `background-image:url('/img/${NC.esc(f.dish.img)}')` : ''}"></div>
         <div class="col" style="gap:4px">
-          <span class="serif" style="font-size:16px;line-height:1.15">${NC.esc(r.dish.name)}</span>
-          <div class="stars sm">${[1, 2, 3, 4, 5].map(n => `<span style="color:${n <= r.stars ? 'var(--gold-solid)' : 'rgba(74,36,61,.18)'}">★</span>`).join('')}</div>
+          <span class="serif" style="font-size:16px;line-height:1.15">${NC.esc(f.dish.name)}</span>
+          <span class="mono" style="font-size:8.5px">${RU[f.dish.cat] || ''}</span>
+          ${f.stars ? `<div class="stars sm">${[1, 2, 3, 4, 5].map(n =>
+            `<span style="color:${n <= f.stars ? 'var(--gold-solid)' : 'rgba(74,36,61,.18)'}">★</span>`).join('')}</div>`
+            : '<span class="muted" style="font-size:10.5px">ещё не пробовали</span>'}
         </div>
       </div>`).join('')}</div>`
-    : '<div class="card" style="font-size:13px;line-height:1.6">Пока пусто. Оценивайте блюда на вкладке «Сегодня» — те, что получат пять звёзд, окажутся здесь.</div>'}
+    : `<div class="card col" style="gap:12px">
+        <span style="font-size:13px;line-height:1.6">Пока пусто. Загляните в коллекцию блюд и отметьте сердечком то, что хочется видеть в рационе.</span>
+        <a class="btn sm" href="/collection.html" style="border:0;align-self:flex-start">Открыть коллекцию</a>
+      </div>`}
     <div class="hr"></div>
-    <span class="mono">Всего оценок: ${rated}</span>
+    <div class="row" style="justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+      <span class="mono">Всего оценок: ${rated}</span>
+      <a class="btn ghost sm" href="/collection.html">Вся коллекция блюд</a>
+    </div>
   </div>`;
 }
 
