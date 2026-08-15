@@ -50,7 +50,7 @@
 const CATS = [['breakfast', 'Завтрак'], ['lunch', 'Обед'], ['dinner', 'Ужин'], ['snack', 'Перекус']];
 const catLabel = (id) => (CATS.find(c => c[0] === id) || [, '—'])[1];
 const state = {
-  dossier: null, promoEdit: null, dishEdit: null, sec: 'dash', s: null, cat: 'all', q: '', form: 'smart', smart: '', ing: '', bulk: '', drag: null };
+  dossier: null, promoEdit: null, dishEdit: null, extraEdit: null, sec: 'dash', s: null, cat: 'all', q: '', form: 'smart', smart: '', ing: '', bulk: '', drag: null };
 const $ = (id) => document.getElementById(id);
 
 $('enter').onclick = async () => {
@@ -82,6 +82,7 @@ const SECTIONS = [
   ['plans', 'Тарифы и цены', () => state.s.tariffs.length],
   ['clients', 'Клиенты', () => state.s.clients.length],
   ['orders', 'Заказы', () => state.s.orders.length],
+  ['extra', 'NC EXTRA', () => (state.s.extras || []).filter(e => !e.hidden).length],
   ['reviews', 'Отзывы', () => (state.s.ratings || []).filter(r => r.text && !r.published).length || ''],
   ['content', 'Контент сайта', () => '']
 ];
@@ -93,6 +94,7 @@ const TITLES = {
   plans: ['Тарифы и цены', 'подписки 7 / 14 / 30 дней'],
   clients: ['Клиенты и подписки', 'рационы и остатки дней'],
   orders: ['Заказы и заявки', 'анкета → подтверждение → оплата'],
+  extra: ['NC EXTRA', 'дополнительные позиции к рациону'],
   reviews: ['Отзывы о блюдах', 'оценки клиентов и публикация на сайте'],
   content: ['Контент сайта', 'тексты главной страницы']
 };
@@ -104,7 +106,7 @@ function render() {
   $('sec-title').textContent = TITLES[state.sec][0];
   $('sec-sub').textContent = TITLES[state.sec][1];
   $('cycle').textContent = 'нужно ' + Math.max(0, 40 - state.s.dishes.length) + ' новых блюд';
-  $('body').innerHTML = ({ dash, dishes, menu, new: formNew, plans, clients, orders, reviews, content })[state.sec]() + dishEditor();
+  $('body').innerHTML = ({ dash, dishes, menu, new: formNew, plans, clients, orders, extra, reviews, content })[state.sec]() + dishEditor() + extraEditor();
   wire();
 }
 
@@ -531,6 +533,114 @@ function dossierView() {
 }
 
 /* ---------- отзывы ---------- */
+/* ---------- NC EXTRA ---------- */
+function extra() {
+  const list = (state.s.extras || []).slice().sort((a, b) => (a.sort || 0) - (b.sort || 0));
+  const orders = (state.s.extraOrders || []).filter(o => o.status !== 'cancelled');
+  const XS = { pending: 'не оплачен', paid: 'оплачен', cancelled: 'отменён' };
+  return `<div class="row" style="justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
+      <span class="muted" style="font-size:13px">Позиции показываются на главной, на странице NC EXTRA и в кабинете клиента.</span>
+      <button class="btn sm" id="x-new">Новая позиция</button>
+    </div>
+
+    <div class="x-admin">${list.map(e => `
+      <div class="card col" style="gap:11px;${e.hidden ? 'opacity:.5' : ''}">
+        <div class="ph" style="${NC.bg(e.img)};aspect-ratio:1;border-radius:12px;background-color:var(--silk);border:1px solid var(--gold);background-size:cover;background-position:center"></div>
+        <div class="col" style="gap:3px">
+          <span class="serif" style="font-size:18px;line-height:1.15">${NC.esc(e.name || 'Без названия')}</span>
+          <span class="muted" style="font-size:11.5px">${NC.esc(e.unit || '')}</span>
+        </div>
+        <div class="row" style="gap:6px;flex-wrap:wrap">
+          <span class="badge">${NC.money(e.price)}</span>
+          ${e.priceMember ? `<span class="badge" style="background:rgba(184,150,102,.2)">${NC.money(e.priceMember)} свои</span>` : ''}
+          ${e.badge ? `<span class="badge" style="background:rgba(74,36,61,.14)">${NC.esc(e.badge)}</span>` : ''}
+          ${e.stock !== null && e.stock !== undefined ? `<span class="badge">${e.stock} шт</span>` : ''}
+          ${e.hidden ? '<span class="badge" style="background:rgba(122,59,59,.14);color:#7a3b3b">скрыта</span>' : ''}
+        </div>
+        <div class="row" style="gap:7px">
+          <button class="chip" data-xedit="${e.id}" style="flex:1">Изменить</button>
+          <button class="chip" data-xhide="${e.id}">${e.hidden ? 'Вернуть' : 'Скрыть'}</button>
+        </div>
+      </div>`).join('') || '<span class="muted">Позиций пока нет — создайте первую.</span>'}</div>
+
+    <div class="hr" style="margin:22px 0 4px"></div>
+    <span class="serif" style="font-size:22px">Заказы NC EXTRA</span>
+    ${orders.length ? `<div class="card" style="padding:0;overflow:hidden"><table>
+      <thead><tr><th>Клиент</th><th>Доставка</th><th>Состав</th><th>Сумма</th><th>Статус</th><th></th></tr></thead>
+      <tbody>${orders.map(o => `<tr>
+        <td>${NC.esc(o.clientName)}</td>
+        <td class="mono">${NC.dateRu(o.deliveryDate)}</td>
+        <td style="font-size:12.5px">${o.items.map(i => NC.esc(i.name) + ' × ' + i.qty).join(', ')}</td>
+        <td>${NC.money(o.sum)}</td>
+        <td><span class="badge">${XS[o.status]}</span></td>
+        <td style="text-align:right;white-space:nowrap">
+          ${o.status === 'pending' ? `<button class="chip" data-xpaid="${o.id}">Оплачен</button>` : ''}
+          <button class="chip" data-xdel="${o.id}">Отменить</button>
+        </td>
+      </tr>`).join('')}</tbody></table></div>`
+      : '<span class="muted" style="font-size:13px">Заказов пока нет.</span>'}`;
+}
+
+function extraEditor() {
+  const e = state.extraEdit;
+  if (!e) return '';
+  const days = [[1, 'пн'], [2, 'вт'], [3, 'ср'], [4, 'чт'], [5, 'пт'], [6, 'сб'], [7, 'вс']];
+  const w = e.availableWeekdays || [];
+  return `<div class="modal" id="x-modal"><div class="modal-in dish-edit">
+    <div class="row" style="justify-content:space-between;align-items:flex-start;gap:12px">
+      <span class="serif" style="font-size:23px">${e.id ? 'Изменить позицию' : 'Новая позиция'}</span>
+      <button class="btn ghost sm" id="xe-close" style="width:36px;height:36px;padding:0;border-radius:50%;flex:0 0 auto">×</button>
+    </div>
+
+    <div class="de-photo">
+      <div class="ph" style="${NC.bg(e.img)}">${e.img ? '' : '<span class="mono">нет фото</span>'}</div>
+      <div class="col" style="gap:8px;flex:1;min-width:0">
+        <button class="btn sm" id="xe-upload">${e.img ? 'Заменить фото' : 'Загрузить фото'}</button>
+        ${e.img ? '<button class="btn ghost sm" id="xe-delimg">Убрать фото</button>' : ''}
+        <input type="file" id="xe-file" accept="image/*" style="display:none">
+      </div>
+    </div>
+
+    <label><span class="mono">Название</span><input data-xe="name" value="${NC.esc(e.name || '')}" placeholder="Хлеб на закваске"></label>
+    <label><span class="mono">Короткое описание</span><input data-xe="desc" value="${NC.esc(e.desc || '')}" placeholder="Пшенично-ржаной, длительная ферментация"></label>
+    <label><span class="mono">Вес или объём</span><input data-xe="unit" value="${NC.esc(e.unit || '')}" placeholder="≈ 500 г"></label>
+
+    <div class="de-grid">
+      <label><span class="mono">Цена</span><input data-xe="price" value="${e.price || ''}" inputmode="decimal"></label>
+      <label><span class="mono">Цена с рационом</span><input data-xe="priceMember" value="${e.priceMember || ''}" inputmode="decimal"></label>
+    </div>
+    <div class="de-grid">
+      <label><span class="mono">Доступно, шт</span><input data-xe="stock" value="${e.stock === null || e.stock === undefined ? '' : e.stock}" inputmode="numeric" placeholder="пусто = без ограничений"></label>
+      <label><span class="mono">Не более на клиента</span><input data-xe="perClientLimit" value="${e.perClientLimit || ''}" inputmode="numeric" placeholder="0 = без лимита"></label>
+    </div>
+
+    <label><span class="mono">Метка</span>
+      <input data-xe="badge" value="${NC.esc(e.badge || '')}" list="xe-badges" placeholder="новинка">
+      <datalist id="xe-badges">${(state.s.extraBadges || []).map(b => `<option value="${b}">`).join('')}</datalist></label>
+
+    <div class="de-grid">
+      <label><span class="mono">Доступна с</span><input data-xe="availableFrom" type="date" value="${e.availableFrom || ''}"></label>
+      <label><span class="mono">Доступна по</span><input data-xe="availableTo" type="date" value="${e.availableTo || ''}"></label>
+    </div>
+
+    <div class="col" style="gap:6px">
+      <span class="mono">Дни недели</span>
+      <div class="days" data-xdays>${days.map(([n, l]) =>
+        `<button type="button" class="${w.includes(n) ? 'on' : ''}" data-n="${n}">${l}</button>`).join('')}</div>
+      <span class="muted" style="font-size:11px">Ничего не выбрано — доступна каждый день.</span>
+    </div>
+
+    <label class="agree" style="margin-top:4px">
+      <input type="checkbox" id="xe-hidden" ${e.hidden ? 'checked' : ''}>
+      <span>Временно скрыть позицию</span></label>
+
+    <div class="row" style="gap:9px;flex-wrap:wrap">
+      <button class="btn" id="xe-save" style="flex:1">Сохранить</button>
+      ${e.id ? '<button class="btn ghost" id="xe-del">Удалить</button>' : ''}
+    </div>
+  </div></div>`;
+}
+
 function reviews() {
   const list = (state.s.ratings || []).filter(r => r.text || r.stars)
     .sort((a, b) => (b.updatedAt || b.createdAt || '').localeCompare(a.updatedAt || a.createdAt || ''));
@@ -716,6 +826,90 @@ function wire() {
       render();
     } catch (e) { NC.toast(e.message); }
   };
+  /* ---- NC EXTRA ---- */
+  const xnew = $('x-new');
+  if (xnew) xnew.onclick = () => {
+    state.extraEdit = { name: '', desc: '', img: '', unit: '', price: 0, priceMember: 0,
+      stock: null, perClientLimit: 0, availableFrom: '', availableTo: '',
+      availableWeekdays: [], hidden: false, badge: '' };
+    render();
+  };
+  document.querySelectorAll('[data-xedit]').forEach(b => b.onclick = () => {
+    state.extraEdit = JSON.parse(JSON.stringify(state.s.extras.find(x => x.id === b.dataset.xedit)));
+    render();
+  });
+  document.querySelectorAll('[data-xhide]').forEach(b => b.onclick = async () => {
+    const e = state.s.extras.find(x => x.id === b.dataset.xhide);
+    try {
+      await NC.api('/api/extras/' + e.id, { method: 'PUT', body: { hidden: !e.hidden } });
+      NC.toast(e.hidden ? 'Вернули в продажу' : 'Скрыто'); reload();
+    } catch (err) { NC.toast(err.message); }
+  });
+  document.querySelectorAll('[data-xpaid]').forEach(b => b.onclick = async () => {
+    await NC.api('/api/extra-orders/' + b.dataset.xpaid + '/paid', { method: 'POST', body: {} });
+    NC.toast('Отмечено оплаченным'); reload();
+  });
+  document.querySelectorAll('[data-xdel]').forEach(b => b.onclick = async () => {
+    if (!confirm('Отменить этот заказ NC EXTRA?')) return;
+    await NC.api('/api/extra-orders/' + b.dataset.xdel + '/cancel', { method: 'POST', body: {} });
+    NC.toast('Отменён'); reload();
+  });
+
+  const xm = document.getElementById('x-modal');
+  if (xm) {
+    const e = state.extraEdit;
+    const closeXm = () => { state.extraEdit = null; render(); };
+    xm.onclick = (ev) => { if (ev.target === xm) closeXm(); };
+    $('xe-close').onclick = closeXm;
+
+    xm.querySelectorAll('[data-xe]').forEach(el => el.oninput = el.onchange = () => {
+      const k = el.dataset.xe;
+      if (k === 'stock') e.stock = el.value === '' ? null : (+el.value || 0);
+      else if (['price', 'priceMember', 'perClientLimit'].includes(k)) e[k] = +el.value || 0;
+      else e[k] = el.value;
+    });
+    $('xe-hidden').onchange = (ev) => { e.hidden = ev.target.checked; };
+
+    const dw = xm.querySelector('[data-xdays]');
+    dw.querySelectorAll('button').forEach(b => b.onclick = () => {
+      e.availableWeekdays = e.availableWeekdays || [];
+      const n = +b.dataset.n, i = e.availableWeekdays.indexOf(n);
+      if (i >= 0) e.availableWeekdays.splice(i, 1); else e.availableWeekdays.push(n);
+      b.classList.toggle('on');
+    });
+
+    const xf = $('xe-file');
+    $('xe-upload').onclick = () => xf.click();
+    xf.onchange = async () => {
+      const f = xf.files[0];
+      if (!f) return;
+      NC.toast('Загружаем фото…');
+      try {
+        const data = await NC.compress(f);
+        const r = await NC.api('/api/images', { method: 'POST', body: { data } });
+        e.img = r.img; NC.toast('Фото загружено'); render();
+      } catch (err) { NC.toast(err.message); }
+      xf.value = '';
+    };
+    const xdi = $('xe-delimg');
+    if (xdi) xdi.onclick = () => { e.img = ''; render(); };
+
+    $('xe-save').onclick = async () => {
+      if (!String(e.name || '').trim()) return NC.toast('Введите название');
+      try {
+        if (e.id) await NC.api('/api/extras/' + e.id, { method: 'PUT', body: e });
+        else await NC.api('/api/extras', { method: 'POST', body: e });
+        state.extraEdit = null; NC.toast('Сохранено'); reload();
+      } catch (err) { NC.toast(err.message); }
+    };
+    const xdel = $('xe-del');
+    if (xdel) xdel.onclick = async () => {
+      if (!confirm('Удалить «' + e.name + '»?')) return;
+      await NC.api('/api/extras/' + e.id, { method: 'DELETE' });
+      state.extraEdit = null; NC.toast('Удалено'); reload();
+    };
+  }
+
   /* ---- редактор блюда ---- */
   document.querySelectorAll('[data-editdish]').forEach(b => b.onclick = () => {
     const d = state.s.dishes.find(x => x.id === b.dataset.editdish);

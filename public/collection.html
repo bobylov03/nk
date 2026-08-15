@@ -114,7 +114,12 @@ function render() {
         <span class="serif">${NC.esc(d.name)}</span>
         <span class="mono">${RU[d.cat] || ''}</span>
       </figcaption>
-    </figure>`).join('') || '<span class="muted">В этой категории пока нет блюд.</span>';
+    </figure>`).join('') || `<div class="card col" style="gap:10px;grid-column:1/-1">
+      <span style="font-size:13.5px;line-height:1.6">${state.dishes.length
+        ? 'В этой категории пока нет блюд.'
+        : 'Коллекция наполняется — совсем скоро здесь появятся блюда из моих рационов.'}</span>
+      ${state.dishes.length ? '' : '<a class="btn sm" href="/order.html" style="border:0;align-self:flex-start">Оформить рацион</a>'}
+    </div>`;
 
   $('hint').textContent = state.client
     ? 'Нажмите на блюдо, чтобы увидеть состав и КБЖУ. Сердечком отмечайте то, что хотите видеть чаще.'

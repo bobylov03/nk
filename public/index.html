@@ -70,6 +70,7 @@
   <nav id="nav-menu">
     <a href="#menu" style="border:0">Меню дня</a>
     <a href="/collection.html" style="border:0">Коллекция</a>
+    <a href="/extra.html" style="border:0">NC EXTRA</a>
     <a href="#how" style="border:0">Как это работает</a>
     <a href="#tariffs" style="border:0">Тарифы</a>
     <a href="#delivery" style="border:0">Доставка</a>
@@ -132,6 +133,16 @@
   </div>
   <div class="coll-strip" id="coll-strip"></div>
   <a class="btn ghost coll-cta" href="/collection.html">Смотреть коллекцию</a>
+</div>
+
+<div class="section silk" id="extra" hidden>
+  <div class="col" style="gap:8px">
+    <span class="mono">NC EXTRA</span>
+    <h2 class="h-sec" id="x-title">Что-то ещё к вашему рациону</h2>
+    <span class="muted" style="font-size:13.5px;line-height:1.6;max-width:38em" id="x-text"></span>
+  </div>
+  <div class="x-strip" id="x-strip"></div>
+  <a class="btn ghost coll-cta" href="/extra.html">Смотреть NC EXTRA</a>
 </div>
 
 <div class="section silk" id="how">
@@ -275,7 +286,12 @@
     ph.innerHTML = '';
   }
 
-  document.getElementById('menu-grid').innerHTML = data.today.slots.map(s => `
+  // пока блюд нет — не показываем пустые карточки «уточняется»
+  const todaySlots = data.today.slots.filter(s => s.dish);
+  if (!todaySlots.length) {
+    document.getElementById('menu').hidden = true;
+  }
+  document.getElementById('menu-grid').innerHTML = todaySlots.map(s => `
     <div class="card col dish-card" data-dish="${s.dish ? s.dish.id : ''}">
       <div class="dish-photo" style="${NC.bg(s.dish && s.dish.img)}"></div>
       <span class="mono">${s.catLabel}</span>
@@ -336,6 +352,25 @@
   const RU = { breakfast: 'Завтрак', lunch: 'Обед', dinner: 'Ужин', snack: 'Перекус' };
   const all = (await NC.api('/api/dishes')).dishes.map(d => Object.assign({}, d, { catLabel: RU[d.cat] }));
   bindSheet(document.getElementById('menu-grid'), all);
+
+  // NC EXTRA: короткая лента, весь ассортимент — на отдельной странице
+  try {
+    const ex = (await NC.api('/api/extras')).extras || [];
+    if (ex.length) {
+      document.getElementById('extra').hidden = false;
+      if (c.extra_title) document.getElementById('x-title').textContent = c.extra_title;
+      document.getElementById('x-text').textContent = c.extra_text || '';
+      document.getElementById('x-strip').innerHTML = ex.slice(0, 8).map(e => `
+        <a class="x-mini" href="/extra.html" style="border:0">
+          <div class="ph" style="${NC.bg(e.img)}">${e.badge ? `<span class="x-badge">${NC.esc(e.badge)}</span>` : ''}</div>
+          <div class="col" style="gap:2px">
+            <b>${NC.esc(e.name)}</b>
+            ${e.unit ? `<s>${NC.esc(e.unit)}</s>` : ''}
+            <span class="pr">${NC.money(e.price)}</span>
+          </div>
+        </a>`).join('');
+    }
+  } catch (e) { /* позиций нет — блок скрыт */ }
 
   // коллекция: только фотографии, подробности — на отдельной странице
   const strip = all.filter(d => d.img).slice(0, 8);

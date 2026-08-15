@@ -614,3 +614,55 @@ textarea{min-height:82px;resize:vertical;font-family:var(--sans);line-height:1.5
   .de-photo .ph{width:96px;height:96px}
   .de-grid4{grid-template-columns:repeat(2,1fr)}
 }
+
+/* ================= NC EXTRA ================= */
+.x-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:20px}
+.x-card{display:flex;flex-direction:column;gap:12px;padding:14px;border-radius:var(--r);
+  background:var(--card);border:1px solid var(--line);box-shadow:var(--shadow)}
+.x-card .ph{position:relative;width:100%;aspect-ratio:1;border-radius:calc(var(--tile-r) - 5px);
+  background:var(--silk) center/cover no-repeat;border:1px solid var(--gold)}
+.x-badge{position:absolute;top:10px;left:10px;padding:5px 11px;border-radius:100px;font-size:10px;
+  letter-spacing:.1em;text-transform:uppercase;background:var(--champagne);color:var(--plum)}
+.x-stock{position:absolute;bottom:10px;right:10px;padding:4px 10px;border-radius:100px;font-size:10.5px;
+  background:rgba(122,59,59,.9);color:#fff}
+.x-price{display:flex;flex-direction:column;gap:2px;padding-top:10px;border-top:1px solid var(--gold)}
+.x-price .serif{font-size:22px;line-height:1}
+.x-price .serif.was{font-size:15px;text-decoration:line-through;opacity:.5}
+.x-price .mono{font-size:9.5px}
+
+/* лента на главной и в кабинете */
+.x-strip{display:flex;gap:14px;overflow-x:auto;scroll-snap-type:x mandatory;padding:2px 0 10px;
+  scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.x-strip::-webkit-scrollbar{display:none}
+.x-strip > *{flex:0 0 auto;scroll-snap-align:start;width:clamp(160px,20vw,215px)}
+.x-mini{display:flex;flex-direction:column;gap:9px;cursor:pointer}
+.x-mini .ph{position:relative;width:100%;aspect-ratio:1;border-radius:var(--tile-r);
+  background:var(--silk) center/cover no-repeat;border:1px solid var(--gold);transition:transform .2s}
+.x-mini:hover .ph{transform:translateY(-3px)}
+.x-mini b{font-family:var(--serif);font-weight:500;font-size:17px;line-height:1.15}
+.x-mini s{text-decoration:none;font-size:11px;color:var(--muted)}
+.x-mini .pr{font-family:var(--serif);font-size:17px}
+
+/* корзина в кабинете */
+.x-cart{display:flex;flex-direction:column;gap:11px;padding:16px;border-radius:var(--r);
+  background:var(--plum);color:var(--champagne)}
+.x-cart .ln{display:flex;justify-content:space-between;gap:12px;font-size:13px;align-items:center}
+.x-cart .qty{display:flex;align-items:center;gap:9px;flex:0 0 auto}
+.x-cart .qty button{width:27px;height:27px;border-radius:50%;border:1px solid rgba(220,192,166,.35);
+  background:transparent;color:var(--champagne);cursor:pointer;font-size:15px;line-height:1;padding:0}
+.x-added{display:flex;flex-direction:column;gap:7px;padding:13px 15px;border-radius:12px;
+  background:rgba(184,150,102,.14);border:1px solid var(--gold-solid)}
+
+@media (max-width:760px){
+  .x-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+  .x-card{padding:10px;gap:9px}
+  .x-card .serif{font-size:17px}
+  .x-price .serif{font-size:19px}
+  .x-strip{margin:0 -20px;padding-left:20px;padding-right:20px}
+  .x-strip > *{width:clamp(142px,44vw,180px)}
+}
+@media (max-width:420px){.x-grid{grid-template-columns:1fr}}
+
+/* сетка позиций в админке */
+.x-admin{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px}
+@media (max-width:760px){.x-admin{grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}}

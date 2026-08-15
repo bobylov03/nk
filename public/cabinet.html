@@ -38,7 +38,7 @@
 <script src="/js/nc.js"></script>
 <script src="/js/dish-sheet.js"></script>
 <script>
-const state = { tab: 'today', d: null, swap: null, draft: null, dirty: false };
+const state = { tab: 'today', d: null, swap: null, draft: null, dirty: false, x: null, cart: {} };
 const $ = (id) => document.getElementById(id);
 const RU = { breakfast: 'Завтрак', lunch: 'Обед', dinner: 'Ужин', snack: 'Перекус' };
 const MARKS = [['love', '❤️', 'В любимые'], ['repeat', '🔄', 'Можно повторить'], ['never', '🙅', 'Больше не готовить']];
@@ -50,6 +50,7 @@ async function load() {
     state.d = await NC.api('/api/client/' + id);
     state.draft = JSON.parse(JSON.stringify(state.d.profile));
     window.__dishes = (await NC.api('/api/dishes')).dishes.map(d => Object.assign({}, d, { catLabel: RU[d.cat] }));
+    try { state.x = await NC.api('/api/client/' + id + '/extras'); } catch (e) { state.x = null; }
     $('login').classList.add('hidden');
     $('app').classList.remove('hidden');
     render();
@@ -67,6 +68,7 @@ $('exit').onclick = () => { localStorage.removeItem('nc_client'); localStorage.r
 
 async function reload() {
   state.d = await NC.api('/api/client/' + state.d.client.id);
+  try { state.x = await NC.api('/api/client/' + state.d.client.id + '/extras'); } catch (e) {}
   if (!state.dirty) state.draft = JSON.parse(JSON.stringify(state.d.profile));
   render();
 }
@@ -216,6 +218,7 @@ function viewToday() {
           <div class="bar"><i style="width:${Math.min(100, Math.round(v / Math.max(1, max) * 100))}%"></i></div>
         </div>`).join('')}
     </div>
+    ${extraBlock()}
     ${yDishes.length ? `
       <div class="row" style="justify-content:space-between;align-items:baseline;margin-top:6px">
         <span class="serif" style="font-size:22px">Как вам вчера?</span>
@@ -223,6 +226,73 @@ function viewToday() {
       </div>
       <span class="q-note">Оценки помогают собирать следующий рацион точнее.</span>
       ${yDishes.map(d => rateBlock(d, y.date)).join('')}` : ''}
+  </div>`;
+}
+
+/* ---------- NC EXTRA в кабинете ---------- */
+function extraBlock() {
+  const x = state.x;
+  if (!x || !x.extras.length) return '';
+  const pending = (x.orders || []).filter(o => o.status === 'pending');
+  const paid = (x.orders || []).filter(o => o.status === 'paid');
+  const cart = Object.entries(state.cart).filter(([, q]) => q > 0);
+  const total = cart.reduce((a, [id, q]) => {
+    const e = x.extras.find(v => v.id === id);
+    return a + (e ? e.yourPrice * q : 0);
+  }, 0);
+
+  return `<div class="col" style="gap:12px;margin-top:6px">
+    <div class="col" style="gap:4px">
+      <span class="serif" style="font-size:22px">Добавить к ближайшей доставке</span>
+      <span class="q-note">Приедет вместе с рационом ${NC.esc(x.deliveryLabel)} — отдельная доставка не оплачивается.</span>
+    </div>
+
+    ${paid.map(o => `<div class="x-added">
+      <span class="mono">Уже в доставке ${NC.dateRu(o.deliveryDate)}</span>
+      <span style="font-size:13px;line-height:1.5">${o.items.map(i => NC.esc(i.name) + ' × ' + i.qty).join(', ')} · ${NC.money(o.sum)}</span>
+    </div>`).join('')}
+
+    <div class="x-strip">${x.extras.map(e => {
+      const q = state.cart[e.id] || 0;
+      return `<div class="x-mini" data-xadd="${e.id}">
+        <div class="ph" style="${NC.bg(e.img)}">
+          ${e.badge ? `<span class="x-badge">${NC.esc(e.badge)}</span>` : ''}
+          ${e.stock !== null && e.stock <= 5 ? `<span class="x-stock">осталось ${e.stock}</span>` : ''}
+          ${q ? `<span class="x-badge" style="left:auto;right:10px;background:var(--plum);color:var(--champagne)">${q} шт</span>` : ''}
+        </div>
+        <div class="col" style="gap:2px">
+          <b>${NC.esc(e.name)}</b>
+          ${e.unit ? `<s>${NC.esc(e.unit)}</s>` : ''}
+          <span class="pr">${NC.money(e.yourPrice)}${e.priceMember && x.member ? ' <s style="font-size:11px;text-decoration:line-through;opacity:.5">' + NC.money(e.price) + '</s>' : ''}</span>
+        </div>
+      </div>`;
+    }).join('')}</div>
+
+    ${cart.length ? `<div class="x-cart">
+      <span class="mono" style="color:rgba(220,192,166,.6)">К доставке ${NC.esc(x.deliveryLabel)}</span>
+      ${cart.map(([id, q]) => {
+        const e = x.extras.find(v => v.id === id);
+        return `<div class="ln">
+          <span style="flex:1;min-width:0">${NC.esc(e.name)}</span>
+          <span class="qty">
+            <button data-xdec="${id}">−</button><span>${q}</span><button data-xinc="${id}">+</button>
+          </span>
+          <span style="width:72px;text-align:right">${NC.money(e.yourPrice * q)}</span>
+        </div>`;
+      }).join('')}
+      <div class="ln" style="padding-top:9px;border-top:1px solid rgba(220,192,166,.22)">
+        <span>Итого</span><span class="serif" style="font-size:21px">${NC.money(total)}</span>
+      </div>
+      <button class="btn light" id="x-pay" style="border:0">Оплатить и добавить</button>
+    </div>` : ''}
+
+    ${pending.map(o => `<div class="card row" style="gap:10px;border-color:var(--gold);justify-content:space-between;flex-wrap:wrap">
+      <span style="font-size:12.5px;line-height:1.5">Не оплачено: ${o.items.map(i => NC.esc(i.name) + ' × ' + i.qty).join(', ')} · ${NC.money(o.sum)}</span>
+      <span class="row" style="gap:7px">
+        <button class="btn sm" data-xpayold="${o.id}">Оплатить</button>
+        <button class="chip" data-xcancel="${o.id}">Отменить</button>
+      </span>
+    </div>`).join('')}
   </div>`;
 }
 
@@ -266,7 +336,7 @@ function viewCollection() {
     </div>
     ${items.length ? `<div class="coll">${items.map(f => `
       <div class="it" data-dish="${f.dish.id}">
-        <div class="ph" style="${f.dish.img ? `background-image:url('/img/${NC.esc(f.dish.img)}')` : ''}"></div>
+        <div class="ph" style="${NC.bg(f.dish.img)}"></div>
         <div class="col" style="gap:4px">
           <span class="serif" style="font-size:16px;line-height:1.15">${NC.esc(f.dish.name)}</span>
           <span class="mono" style="font-size:8.5px">${RU[f.dish.cat] || ''}</span>
@@ -482,6 +552,54 @@ function wire() {
     try {
       const r = await NC.api('/api/client/' + id + '/extend', { method: 'POST', body: { tariffId: b.dataset.extend } });
       location.href = '/order.html?order=' + r.order.id;
+    } catch (e) { NC.toast(e.message); }
+  });
+
+  /* NC EXTRA */
+  document.querySelectorAll('[data-xadd]').forEach(el => el.onclick = () => {
+    const k = el.dataset.xadd, e = state.x.extras.find(v => v.id === k);
+    const q = (state.cart[k] || 0) + 1;
+    if (e.limit && q > e.limit) return NC.toast('Не более ' + e.limit + ' шт. на клиента');
+    if (e.stock !== null && q > e.stock) return NC.toast('Осталось ' + e.stock + ' шт.');
+    state.cart[k] = q; render();
+  });
+  document.querySelectorAll('[data-xinc]').forEach(b => b.onclick = () => {
+    const k = b.dataset.xinc, e = state.x.extras.find(v => v.id === k);
+    const q = (state.cart[k] || 0) + 1;
+    if (e.limit && q > e.limit) return NC.toast('Не более ' + e.limit + ' шт. на клиента');
+    if (e.stock !== null && q > e.stock) return NC.toast('Осталось ' + e.stock + ' шт.');
+    state.cart[k] = q; render();
+  });
+  document.querySelectorAll('[data-xdec]').forEach(b => b.onclick = () => {
+    const k = b.dataset.xdec;
+    state.cart[k] = Math.max(0, (state.cart[k] || 0) - 1);
+    if (!state.cart[k]) delete state.cart[k];
+    render();
+  });
+  const xpay = $('x-pay');
+  if (xpay) xpay.onclick = async () => {
+    const items = Object.entries(state.cart).filter(([, q]) => q > 0).map(([extraId, qty]) => ({ extraId, qty }));
+    if (!items.length) return;
+    try {
+      const r = await NC.api('/api/client/' + id + '/extras', {
+        method: 'POST', body: { deliveryDate: state.x.deliveryDate, items, recurring: 'once' }
+      });
+      await NC.api('/api/client/' + id + '/extras-pay', { method: 'POST', body: { orderId: r.order.id } });
+      state.cart = {};
+      NC.toast('Добавлено к доставке ' + NC.dateRu(state.x.deliveryDate));
+      await reload();
+    } catch (e) { NC.toast(e.message); }
+  };
+  document.querySelectorAll('[data-xpayold]').forEach(b => b.onclick = async () => {
+    try {
+      await NC.api('/api/client/' + id + '/extras-pay', { method: 'POST', body: { orderId: b.dataset.xpayold } });
+      NC.toast('Оплачено'); await reload();
+    } catch (e) { NC.toast(e.message); }
+  });
+  document.querySelectorAll('[data-xcancel]').forEach(b => b.onclick = async () => {
+    try {
+      await NC.api('/api/client/' + id + '/extras-cancel', { method: 'POST', body: { orderId: b.dataset.xcancel } });
+      NC.toast('Отменено'); await reload();
     } catch (e) { NC.toast(e.message); }
   });
 

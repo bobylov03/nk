@@ -39,6 +39,8 @@ const writeDb = (db) => store().setJSON('db', db);
 /* блоб мог быть создан до появления оценок и профилей — дополняем на лету */
 function migrate(db) {
   db.ratings = db.ratings || [];
+  db.extras = db.extras || seed.extras || [];
+  db.extraOrders = db.extraOrders || [];
   db.clients = (db.clients || []).map(c => ({
     photo: '', log: [], chefComments: [], favourites: [], chefNote: { date: '', text: '' }, ...c,
     profile: { diet: 'omnivore', dietNote: '', persons: 1, weekdays: [1,2,3,4,5,6,7], slotNote: '', ...(c.profile || {}) }

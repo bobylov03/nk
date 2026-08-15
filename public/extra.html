@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>NC EXTRA — дополнения к рациону от NC meals</title>
+<meta name="description" content="Свежие соки, хлеб на закваске, домашняя гранола и джем без сахара — небольшие позиции, которые можно добавить к ближайшей доставке рациона.">
+<link rel="canonical" href="https://ncmeals.ge/extra.html">
+<meta name="robots" content="index, follow">
+<meta name="theme-color" content="#4a243d">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://ncmeals.ge/extra.html">
+<meta property="og:site_name" content="NC meals">
+<meta property="og:title" content="NC EXTRA — дополнения к рациону">
+<meta property="og:description" content="Соки, хлеб на закваске, гранола и джемы к вашей ближайшей доставке.">
+<meta property="og:image" content="https://ncmeals.ge/img/food-fruits.jpg">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=Jost:wght@300;400;500&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/nc.css">
+</head>
+<body>
+
+<div class="nav" id="nav">
+  <a href="/" style="border:0" id="logo"></a>
+  <nav id="nav-menu">
+    <a href="/#menu" style="border:0">Меню дня</a>
+    <a href="/collection.html" style="border:0">Коллекция</a>
+    <a href="/extra.html" style="border:0">NC EXTRA</a>
+    <a href="/#tariffs" style="border:0">Тарифы</a>
+    <a href="/cabinet.html" class="only-mobile" style="border:0">Моя кухня</a>
+  </nav>
+  <div class="row" style="gap:10px">
+    <a class="btn ghost sm" href="/cabinet.html" style="border-bottom:1px solid rgba(74,36,61,.28)">Моя кухня</a>
+    <a class="btn sm" href="/order.html" style="border:0">Оформить рацион</a>
+  </div>
+  <button class="burger" id="burger" aria-label="Меню" aria-expanded="false" aria-controls="nav-menu"><i></i></button>
+</div>
+
+<div class="coll-head">
+  <span class="mono">NC EXTRA</span>
+  <h1 style="font-size:clamp(30px,5vw,46px)" id="x-title">Что-то ещё к вашему рациону</h1>
+  <p class="muted" id="x-text">Свежие соки, хлеб на закваске, домашняя гранола и другие позиции,
+    которые можно добавить к ближайшей доставке.</p>
+</div>
+
+<div class="coll-wrap">
+  <div class="x-grid" id="grid"></div>
+  <div class="card row" id="note" style="gap:12px;border-color:var(--gold);align-items:flex-start">
+    <span style="font-size:17px;line-height:1">🛵</span>
+    <span style="font-size:13px;line-height:1.6">Позиции едут вместе с рационом, отдельная доставка не оплачивается.
+      Добавить их можно в личном кабинете — там видно, к какой именно доставке они прикрепятся.</span>
+  </div>
+</div>
+
+<div class="section dark split">
+  <div class="col" style="gap:10px;max-width:34em">
+    <h2 class="h-sec" style="color:var(--champagne)" id="cta-title">Добавить к ближайшей доставке</h2>
+    <span class="muted" style="font-size:14px;line-height:1.6" id="cta-text">Войдите в личный кабинет — там показана ваша ближайшая доставка и цена для клиентов с активным рационом.</span>
+  </div>
+  <a class="btn light" href="/cabinet.html" style="border:0" id="cta-btn">Моя кухня</a>
+</div>
+
+<div class="footer">
+  <span class="mono">MEALS MADE AROUND YOU</span>
+  <div class="socials" id="socials"></div>
+  <span class="mono" id="footer"></span>
+  <a class="mono" href="/terms.html" style="border-bottom:1px solid var(--line)">Условия сервиса</a>
+</div>
+
+<script src="/js/nc.js"></script>
+<script src="/js/nav.js"></script>
+<script>
+(async function () {
+  document.getElementById('logo').innerHTML = NC.logo();
+  const pub = await NC.api('/api/public');
+  const c = pub.content;
+  NC.cur = c.currency || '₾';
+  document.getElementById('footer').textContent = c.footer || '';
+  NC.socials(document.getElementById('socials'), c);
+  if (c.extra_title) document.getElementById('x-title').textContent = c.extra_title;
+  if (c.extra_text) document.getElementById('x-text').textContent = c.extra_text;
+
+  // если клиент вошёл — показываем его цену и ближайшую доставку
+  let data = null, member = false;
+  const id = NC.clientId();
+  if (id && NC.token()) {
+    try {
+      data = await NC.api('/api/client/' + id + '/extras');
+      member = data.member;
+    } catch (e) { /* не вошёл — обычная витрина */ }
+  }
+  const list = data ? data.extras : (await NC.api('/api/extras')).extras;
+
+  if (data) {
+    document.getElementById('cta-title').textContent = 'Ближайшая доставка · ' + data.deliveryLabel;
+    document.getElementById('cta-text').textContent = member
+      ? 'Цены ниже уже с учётом вашего активного рациона. Добавить позиции можно в кабинете.'
+      : 'Рацион сейчас не активен, поэтому показана обычная цена.';
+    document.getElementById('cta-btn').textContent = 'Открыть кабинет';
+  }
+
+  document.getElementById('grid').innerHTML = list.map(e => `
+    <article class="x-card">
+      <div class="ph" style="${NC.bg(e.img)}">
+        ${e.badge ? `<span class="x-badge">${NC.esc(e.badge)}</span>` : ''}
+        ${e.stock !== null && e.stock <= 5 ? `<span class="x-stock">осталось ${e.stock}</span>` : ''}
+      </div>
+      <div class="col" style="gap:5px;flex:1">
+        <span class="serif" style="font-size:20px;line-height:1.15">${NC.esc(e.name)}</span>
+        ${e.desc ? `<span class="muted" style="font-size:12.5px;line-height:1.5">${NC.esc(e.desc)}</span>` : ''}
+        ${e.unit ? `<span class="mono" style="font-size:9px">${NC.esc(e.unit)}</span>` : ''}
+      </div>
+      <div class="x-price">
+        <span class="serif ${member && e.priceMember ? 'was' : ''}">${NC.money(e.price)}</span>
+        ${e.priceMember ? `<span class="mono">${member ? 'ваша цена ' + NC.money(e.priceMember) : NC.money(e.priceMember) + ' с активным рационом'}</span>` : ''}
+      </div>
+      <a class="btn ghost sm" href="/cabinet.html">Добавить</a>
+    </article>`).join('') || '<span class="muted">Сейчас доступных позиций нет — загляните позже.</span>';
+})();
+</script>
+</body>
+</html>
