@@ -7,7 +7,7 @@ function dishSheet(d) {
   return '<div class="sheet" id="sheet"><div class="inner" onclick="event.stopPropagation()">' +
     '<div class="row" style="justify-content:space-between"><span class="mono">' + (d.catLabel || '') + '</span>' +
       '<button class="btn ghost sm" id="sheet-close" style="width:34px;height:34px;padding:0;border-radius:50%">×</button></div>' +
-    '<div class="photo" style="' + (d.img ? "background-image:url('/img/" + d.img + "')" : '') + '"></div>' +
+    '<div class="photo" style="' + NC.bg(d.img) + '"></div>' +
     '<div class="col" style="gap:8px"><span class="serif" style="font-size:28px;line-height:1.12">' + NC.esc(d.name) + '</span>' +
       '<span class="muted" style="font-size:14px;line-height:1.6">' + NC.esc(d.desc || 'Описание появится, когда блюдо войдёт в цикл.') + '</span></div>' +
     '<div class="macro4">' + macros.map(function (m) { return '<div><span class="serif" style="font-size:22px;line-height:1">' + m[0] + '</span><span class="mono" style="font-size:8px">' + m[1] + '</span></div>'; }).join('') + '</div>' +

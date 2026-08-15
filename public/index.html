@@ -211,7 +211,7 @@
   // главный экран: мягкая смена 2–3 фото (файлы задаются в админке)
   const photos = String(c.hero_photos || 'food-toast.jpg').split(',').map(x => x.trim()).filter(Boolean);
   const hp = document.getElementById('hero-photo');
-  hp.innerHTML = photos.map((f, i) => `<i class="${i ? '' : 'on'}" style="background-image:url('/img/${f}')"></i>`).join('');
+  hp.innerHTML = photos.map((f, i) => `<i class="${i ? '' : 'on'}" style="${NC.bg(f)}"></i>`).join('');
   if (photos.length > 1) {
     let n = 0;
     setInterval(() => {
@@ -270,14 +270,14 @@
   });
   if (c.about_photo) {
     const ph = document.getElementById('about-photo');
-    ph.style.backgroundImage = "url('/img/" + c.about_photo + "')";
+    ph.style.backgroundImage = "url('" + NC.imgUrl(c.about_photo) + "')";
     ph.style.border = '1px solid var(--gold)';
     ph.innerHTML = '';
   }
 
   document.getElementById('menu-grid').innerHTML = data.today.slots.map(s => `
     <div class="card col dish-card" data-dish="${s.dish ? s.dish.id : ''}">
-      <div class="dish-photo" style="${s.dish && s.dish.img ? `background-image:url('/img/${s.dish.img}')` : ''}"></div>
+      <div class="dish-photo" style="${NC.bg(s.dish && s.dish.img)}"></div>
       <span class="mono">${s.catLabel}</span>
       <span class="serif dish-name">${NC.esc(s.dish ? s.dish.name : 'уточняется')}</span>
       <span class="muted dish-macros">${s.dish ? NC.macros(s.dish) + ' · ' + s.dish.weight + ' г' : ''}</span>
@@ -318,7 +318,7 @@
       track.innerHTML = rev.map(r => `
         <div class="rev">
           <div class="row" style="gap:11px">
-            <div class="tile sm" style="${r.img ? `background-image:url('/img/${r.img}')` : ''}"></div>
+            <div class="tile sm" style="${NC.bg(r.img)}"></div>
             <div class="col" style="gap:2px;min-width:0">
               <span class="serif" style="font-size:17px;line-height:1.15">${NC.esc(r.dish)}</span>
               <span style="color:var(--gold-solid);font-size:12px">${'★'.repeat(r.stars)}</span>
@@ -345,7 +345,7 @@
   } else {
     box.innerHTML = strip.map(d => `
       <a href="/collection.html" aria-label="${NC.esc(d.name)}" title="${NC.esc(d.name)}">
-        <div class="ph" style="background-image:url('/img/${NC.esc(d.img)}')"></div>
+        <div class="ph" style="${NC.bg(d.img)}"></div>
       </a>`).join('');
 
     const prev = document.getElementById('strip-prev'), next = document.getElementById('strip-next');

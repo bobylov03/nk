@@ -105,7 +105,7 @@ function render() {
   const list = state.cat === 'all' ? state.dishes : state.dishes.filter(d => d.cat === state.cat);
   $('grid').innerHTML = list.map(d => `
     <figure class="tile-card" data-open="${d.id}">
-      <div class="ph" style="${d.img ? `background-image:url('/img/${NC.esc(d.img)}')` : ''}">
+      <div class="ph" style="${NC.bg(d.img)}">
         ${state.client ? `<button class="heart ${state.fav.includes(d.id) ? 'on' : ''}" data-fav="${d.id}"
             aria-label="В любимые" title="В любимые">♥</button>` : ''}
         ${state.rates[d.id] && state.rates[d.id].stars ? `<span class="own-stars">${'★'.repeat(state.rates[d.id].stars)}</span>` : ''}
@@ -163,7 +163,7 @@ function openDish(id) {
       <span class="mono">${RU[d.cat] || ''}</span>
       <button class="btn ghost sm" data-close style="width:36px;height:36px;padding:0;border-radius:50%;flex:0 0 auto">×</button>
     </div>
-    <div class="dish-photo-lg" style="${d.img ? `background-image:url('/img/${NC.esc(d.img)}')` : ''}">
+    <div class="dish-photo-lg" style="${NC.bg(d.img)}">
       ${state.client ? `<button class="heart ${state.fav.includes(d.id) ? 'on' : ''}" data-fav="${d.id}" aria-label="В любимые">♥</button>` : ''}
     </div>
     <div class="col" style="gap:8px">

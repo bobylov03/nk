@@ -1,0 +1,4 @@
+node_modules/
+.netlify/
+data/images/
+*.log

@@ -11,6 +11,20 @@ const SECRET = process.env.NC_SECRET || 'nc-dev-secret-change-me';
 const ADMIN_PASSWORD = process.env.NC_ADMIN_PASSWORD || seed.admin.password;
 
 const store = () => getStore({ name: 'nc-meals', consistency: 'strong' });
+const imgStore = () => getStore({ name: 'nc-images' });
+
+/* фотографии блюд: отдельное хранилище, чтобы не раздувать db */
+const images = {
+  async put(key, buf, type) {
+    await imgStore().set(key, buf, { metadata: { type } });
+  },
+  async get(key) {
+    const r = await imgStore().getWithMetadata(key, { type: 'arrayBuffer' });
+    if (!r) return null;
+    return { buf: Buffer.from(r.data), type: (r.metadata && r.metadata.type) || 'image/jpeg' };
+  },
+  async del(key) { await imgStore().delete(key); }
+};
 
 async function readDb() {
   const s = store();
@@ -55,7 +69,7 @@ export default async function handler(req) {
 
   try {
     const db = await readDb();
-    const { code, data, changed } = await handle({
+    const result = await handle({
       method: req.method,
       path,
       body,
@@ -63,9 +77,20 @@ export default async function handler(req) {
       token: req.headers.get('x-nc-token') || '',
       db,
       secret: SECRET,
-      adminPassword: ADMIN_PASSWORD
+      adminPassword: ADMIN_PASSWORD,
+      images
     });
+    const { code, data, changed } = result;
     if (changed) await writeDb(db);
+    if (result.binary) {
+      return new Response(result.binary.buf, {
+        status: 200,
+        headers: {
+          'content-type': result.binary.type,
+          'cache-control': 'public, max-age=31536000, immutable'
+        }
+      });
+    }
     return json(code, data);
   } catch (e) {
     return json(500, { error: e.message });

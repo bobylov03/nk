@@ -18,9 +18,38 @@ const NC = {
   money: (n) => (Math.round(n * 100) / 100).toLocaleString('ru-RU') + ' ' + NC.cur,
   macros: (d) => d ? `${d.kcal} ккал · Б${d.p} Ж${d.f} У${d.c}` : '',
   esc: (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])),
+  /* Путь к фото: загруженные лежат в хранилище, старые — в public/img */
+  imgUrl(img) {
+    if (!img) return '';
+    if (/^https?:\/\//.test(img)) return img;
+    return img.startsWith('up_') ? '/api/images/' + img : '/img/' + img;
+  },
+  bg(img) {
+    const u = NC.imgUrl(img);
+    return u ? `background-image:url('${u}')` : '';
+  },
   tile(dish, cls) {
-    const img = dish && dish.img ? `background-image:url('/img/${dish.img}')` : '';
-    return `<div class="tile ${cls || ''}" style="${img}"></div>`;
+    return `<div class="tile ${cls || ''}" style="${NC.bg(dish && dish.img)}"></div>`;
+  },
+  /* Сжимаем фото прямо в браузере: с телефона прилетают снимки по 5–10 МБ,
+     а для карточки хватает 1400 px по длинной стороне. */
+  async compress(file, max = 1400, quality = 0.82) {
+    if (!/^image\//.test(file.type)) throw new Error('Это не изображение');
+    const url = URL.createObjectURL(file);
+    try {
+      const img = await new Promise((res, rej) => {
+        const i = new Image();
+        i.onload = () => res(i);
+        i.onerror = () => rej(new Error('Не удалось прочитать файл'));
+        i.src = url;
+      });
+      const scale = Math.min(1, max / Math.max(img.width, img.height));
+      const w = Math.round(img.width * scale), h = Math.round(img.height * scale);
+      const cv = document.createElement('canvas');
+      cv.width = w; cv.height = h;
+      cv.getContext('2d').drawImage(img, 0, 0, w, h);
+      return cv.toDataURL('image/jpeg', quality);
+    } finally { URL.revokeObjectURL(url); }
   },
   toast(msg) {
     const el = document.createElement('div');
