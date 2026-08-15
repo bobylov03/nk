@@ -40,6 +40,7 @@ const writeDb = (db) => store().setJSON('db', db);
 function migrate(db) {
   db.ratings = db.ratings || [];
   db.extras = db.extras || seed.extras || [];
+  db.pricing = db.pricing || seed.pricing;
   db.extraOrders = db.extraOrders || [];
   db.clients = (db.clients || []).map(c => ({
     photo: '', log: [], chefComments: [], favourites: [], chefNote: { date: '', text: '' }, ...c,

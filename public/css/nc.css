@@ -666,3 +666,7 @@ textarea{min-height:82px;resize:vertical;font-family:var(--sans);line-height:1.5
 /* сетка позиций в админке */
 .x-admin{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px}
 @media (max-width:760px){.x-admin{grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}}
+
+/* коэффициенты цены */
+.pr-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.pr-grid input{text-align:center;font-family:var(--mono);font-size:13px}

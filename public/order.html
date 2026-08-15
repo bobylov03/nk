@@ -72,9 +72,20 @@ const tariff = () => state.data.tariffs.find(t => t.id === state.form.tariffId) 
 const discount = () => state.order ? (state.order.promoDiscount || 0) : (state.form.promoOk || 0);
 const slotOf = (id) => state.data.slots.find(s => s.id === id) || state.data.slots[0];
 const slotExtra = () => +(slotOf(P().delivery.slot).extra || 0);
+/* цена = день × дни × коэффициент за человек × коэффициент за приёмы */
+function tariffSum(t, p) {
+  const pr = state.data.pricing || { persons: {}, meals: {} };
+  const kp = +pr.persons[p.persons] || +p.persons || 1;
+  const km = +pr.meals[p.meals] || 1;
+  return Math.round((t.perDay || 0) * (t.days || 0) * kp * km);
+}
+const fromPrice = (t) => {
+  const f = (state.data.tariffsFrom || []).find(x => x.id === t.id);
+  return f ? f.from : tariffSum(t, { persons: 1, meals: 3 });
+};
 const sum = () => {
   if (state.order) return state.order.sum;
-  const base = tariff().perDay * tariff().days + slotExtra();
+  const base = tariffSum(tariff(), P()) + slotExtra();
   return discount() ? Math.round(base * (1 - discount() / 100)) : base;
 };
 
@@ -140,7 +151,8 @@ function render() {
   $('step-note').textContent = NOTES[state.step - 1] || '';
   $('dots').innerHTML = Array.from({ length: QSTEPS }, (_, i) =>
     '<i class="' + (i + 1 <= state.step ? 'on' : '') + '"></i>').join('');
-  $('total-label').textContent = state.step === 9 ? 'К оплате' : 'Стоимость';
+  $('total-label').textContent = state.step === 9 ? 'К оплате'
+    : (state.step <= QSTEPS && P().persons > 1) ? 'Стоимость · ' + P().persons + ' чел.' : 'Стоимость';
   $('total').textContent = NC.money(sum());
   $('cta').textContent = CTA[state.step - 1];
   $('back').style.visibility = (state.step === 1 || state.step > QSTEPS) ? 'hidden' : 'visible';
@@ -188,7 +200,10 @@ function step1() {
       <div class="card row ${t.id === f.tariffId ? 'sel' : ''}" data-tariff="${t.id}" style="cursor:pointer;gap:14px">
         <span style="width:20px;height:20px;border-radius:50%;border:1px solid ${t.id === f.tariffId ? 'var(--gold-solid)' : 'rgba(74,36,61,.3)'};background:${t.id === f.tariffId ? 'var(--gold-solid)' : 'transparent'}"></span>
         <span class="col" style="flex:1;gap:3px"><span class="serif" style="font-size:20px">${NC.esc(t.name)}</span><span class="muted" style="font-size:12px">${t.days} дней · ${t.perDay} ${NC.cur}/день</span></span>
-        <span class="serif" style="font-size:22px;white-space:nowrap">${NC.money(t.perDay * t.days)}</span>
+        <span class="col" style="align-items:flex-end;gap:1px;flex:0 0 auto">
+          <span class="serif" style="font-size:22px;white-space:nowrap">${t.id === f.tariffId ? NC.money(tariffSum(t, P())) : 'от ' + NC.money(fromPrice(t))}</span>
+          ${t.id === f.tariffId && P().persons > 1 ? `<span class="mono" style="font-size:8.5px">на ${P().persons} чел.</span>` : ''}
+        </span>
       </div>`).join('')}
     <div class="card q">
       <span class="q-title">Сколько приёмов пищи хотите получать?</span>
@@ -424,6 +439,7 @@ function summary(o) {
   const rows = [
     ['Рацион', t.name + ' · ' + (o.planDays || t.days) + ' дней'],
     ['Приёмов в день', String(o.meals || p.meals)],
+    ['Человек', (o.persons || p.persons) > 1 ? String(o.persons || p.persons) : ''],
     ['Тип питания', dietName(p.diet)],
     ['Цель', (p.goals || []).join(', ')],
     ['Медицинское', (p.medical || []).join(', ')],
@@ -445,7 +461,7 @@ function summary(o) {
 
 function wire() {
   const f = state.form, p = P();
-  NC.bindPickers($('body'), p, () => { if (state.step === 1) render(); });
+  NC.bindPickers($('body'), p, () => { if (state.step === 1) render(); });   // цена зависит от человек и приёмов
 
   document.querySelectorAll('[data-tariff]').forEach(el => el.onclick = () => { f.tariffId = el.dataset.tariff; render(); });
   document.querySelectorAll('[data-pay]').forEach(el => el.onclick = () => { f.pay = el.dataset.pay; render(); });

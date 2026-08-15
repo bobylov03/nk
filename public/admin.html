@@ -342,6 +342,33 @@ function plans() {
       </div>
     </div>
 
+    <div class="card col" style="gap:14px;margin-top:20px">
+      <div class="row" style="justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:10px">
+        <span class="serif" style="font-size:22px">Как считается цена</span>
+        <span class="muted" style="font-size:12.5px">цена дня × дни × коэффициент</span>
+      </div>
+
+      <span class="mono">Коэффициент за количество человек</span>
+      <div class="pr-grid">
+        ${[1, 2, 3].map(n => `<label><span class="muted" style="font-size:12px">${n} чел.</span>
+          <input data-pr="persons:${n}" value="${(state.s.pricing.persons[n] ?? n)}" inputmode="decimal"></label>`).join('')}
+      </div>
+
+      <span class="mono">Коэффициент за количество приёмов</span>
+      <div class="pr-grid">
+        ${[3, 4, 5].map(n => `<label><span class="muted" style="font-size:12px">${n} приёма</span>
+          <input data-pr="meals:${n}" value="${(state.s.pricing.meals[n] ?? 1)}" inputmode="decimal"></label>`).join('')}
+      </div>
+
+      <div class="card col" style="gap:7px;background:var(--silk);box-shadow:none">
+        <span class="mono">Пример по тарифу «${NC.esc(state.s.tariffs[1] ? state.s.tariffs[1].name : state.s.tariffs[0].name)}»</span>
+        <div id="pr-preview" class="col" style="gap:4px;font-size:13px"></div>
+      </div>
+
+      <button class="btn sm" id="pr-save" style="align-self:flex-start">Сохранить коэффициенты</button>
+      <span class="muted" style="font-size:11.5px;line-height:1.5">1 — цена не меняется, 2 — удваивается, 1.8 — скидка для пары. На карточках тарифов клиент видит «от» и минимальную цену.</span>
+    </div>
+
     <div class="card col" style="gap:12px;margin-top:20px">
       <span class="serif" style="font-size:22px">Резервная копия</span>
       <span class="muted" style="font-size:12.5px;line-height:1.6">Скачивает всё: блюда, меню, клиентов, заказы, отзывы и тексты сайта. Делайте копию перед крупными изменениями — восстановление полностью заменит текущие данные.</span>
@@ -1014,6 +1041,36 @@ function wire() {
     });
     return out;
   };
+  /* ---- коэффициенты цены ---- */
+  const prInputs = () => {
+    const out = { persons: {}, meals: {} };
+    document.querySelectorAll('[data-pr]').forEach(el => {
+      const [g, k] = el.dataset.pr.split(':');
+      out[g][k] = +el.value || 1;
+    });
+    return out;
+  };
+  const prPreview = () => {
+    const box = $('pr-preview');
+    if (!box) return;
+    const t = state.s.tariffs[1] || state.s.tariffs[0];
+    const pr = prInputs();
+    box.innerHTML = [1, 2, 3].map(n => {
+      const km = +pr.meals[4] || 1;
+      const sum = Math.round(t.perDay * t.days * (+pr.persons[n] || n) * km);
+      return `<div class="row" style="justify-content:space-between"><span class="muted">${n} чел. · 4 приёма</span><b style="font-weight:400">${NC.money(sum)}</b></div>`;
+    }).join('');
+  };
+  document.querySelectorAll('[data-pr]').forEach(el => el.oninput = prPreview);
+  prPreview();
+  const prSave = $('pr-save');
+  if (prSave) prSave.onclick = async () => {
+    try {
+      await NC.api('/api/pricing', { method: 'PUT', body: prInputs() });
+      NC.toast('Коэффициенты сохранены'); reload();
+    } catch (e) { NC.toast(e.message); }
+  };
+
   const bget = $('backup-get');
   if (bget) bget.onclick = async () => {
     try {

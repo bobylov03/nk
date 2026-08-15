@@ -318,7 +318,7 @@
         <span>${t.meals} приёма пищи в день</span><span>${t.days} дней рациона</span><span>Запрос замены и пауза</span>
       </div>
       <div class="row" style="justify-content:space-between;align-items:baseline;padding-top:16px;border-top:1px solid var(--gold);margin-top:auto">
-        <span class="mono">Итого</span><span class="serif" style="font-size:26px">${NC.money(t.perDay * t.days)}</span>
+        <span class="mono">Итого</span><span class="serif" style="font-size:26px">${'от ' + NC.money((data.tariffsFrom.find(x => x.id === t.id) || {}).from ?? t.perDay * t.days)}</span>
       </div>
     </a>`).join('');
   document.querySelectorAll('#tariff-grid a').forEach(a => a.style.borderBottom = '1px solid var(--line)');
