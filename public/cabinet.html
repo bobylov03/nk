@@ -38,7 +38,7 @@
 <script src="/js/nc.js"></script>
 <script src="/js/dish-sheet.js"></script>
 <script>
-const state = { tab: 'today', d: null, swap: null, draft: null, dirty: false, x: null, cart: {} };
+const state = { tab: 'today', d: null, swap: null, draft: null, members: [], who: 0, dirty: false, x: null, cart: {} };
 const $ = (id) => document.getElementById(id);
 const RU = { breakfast: 'Завтрак', lunch: 'Обед', dinner: 'Ужин', snack: 'Перекус' };
 const MARKS = [['love', '❤️', 'В любимые'], ['repeat', '🔄', 'Можно повторить'], ['never', '🙅', 'Больше не готовить']];
@@ -49,6 +49,7 @@ async function load() {
   try {
     state.d = await NC.api('/api/client/' + id);
     state.draft = JSON.parse(JSON.stringify(state.d.profile));
+    state.members = JSON.parse(JSON.stringify(state.d.members || []));
     window.__dishes = (await NC.api('/api/dishes')).dishes.map(d => Object.assign({}, d, { catLabel: RU[d.cat] }));
     try { state.x = await NC.api('/api/client/' + id + '/extras'); } catch (e) { state.x = null; }
     $('login').classList.add('hidden');
@@ -69,7 +70,10 @@ $('exit').onclick = () => { localStorage.removeItem('nc_client'); localStorage.r
 async function reload() {
   state.d = await NC.api('/api/client/' + state.d.client.id);
   try { state.x = await NC.api('/api/client/' + state.d.client.id + '/extras'); } catch (e) {}
-  if (!state.dirty) state.draft = JSON.parse(JSON.stringify(state.d.profile));
+  if (!state.dirty) {
+    state.draft = JSON.parse(JSON.stringify(state.d.profile));
+    state.members = JSON.parse(JSON.stringify(state.d.members || []));
+  }
   render();
 }
 
@@ -398,14 +402,31 @@ function viewStats() {
 }
 
 /* ---------- вкладка «Профиль» = мои предпочтения ---------- */
+/* какой профиль сейчас редактируем: 0 — основной, дальше члены семьи */
+function curProfile() {
+  return state.who === 0 ? state.draft : state.members[state.who - 1].profile;
+}
+
 function viewProfile() {
-  const p = state.draft, o = state.d.options, c = state.d.client;
+  const p = curProfile(), o = state.d.options, c = state.d.client;
+  const people = [{ name: c.name.split(' ')[0] }].concat(state.members);
+  const canAdd = people.length < (state.d.maxMembers || 3);
   return `<div class="col fade" style="gap:14px">
-    <div class="col" style="gap:6px">
+    <div class="col" style="gap:8px">
       <span class="serif" style="font-size:22px">Мои предпочтения</span>
-      <span class="q-note">Меняйте что угодно и когда угодно — новый рацион соберём уже с учётом правок.</span>
+      <span class="q-note">У каждого едока своя анкета: аллергии, вкусы и цель могут отличаться. Адрес, график и окно доставки — общие.</span>
     </div>
 
+    ${people.length > 1 || canAdd ? `<div class="who-tabs" data-who>
+      ${people.map((m, i) => `<button type="button" class="${state.who === i ? 'on' : ''}" data-i="${i}">${NC.esc(m.name || 'Едок ' + (i + 1))}</button>`).join('')}
+      ${canAdd ? '<button type="button" data-addmember title="Добавить едока">+</button>' : ''}
+    </div>` : ''}
+
+    ${state.who > 0 ? `<div class="card q">
+      <span class="q-title">Имя</span>
+      <input data-mname value="${NC.esc(state.members[state.who - 1].name)}" placeholder="Давид">
+      <button class="btn ghost sm" data-delmember style="align-self:flex-start;margin-top:4px">Убрать этого едока</button>
+    </div>` : ''}
     <div class="card q"><span class="q-title">Тип питания</span>
       ${NC.diets(o.diets, p.diet)}
       <label style="margin-top:4px"><span class="mono">Уточнения</span>
@@ -428,10 +449,10 @@ function viewProfile() {
     <div class="card q"><span class="q-title">Никогда не использовать</span>
       <textarea data-p="never" placeholder="Категорические запреты">${NC.esc(p.never)}</textarea></div>
 
-    <div class="card q"><span class="q-title">В какие дни привозить</span>
+    ${state.who === 0 ? `<div class="card q"><span class="q-title">В какие дни привозить</span>
       ${NC.days(o.weekdays, p.weekdays)}
       <span class="q-note">Пропущенные дни не сгорают — программа продлевается.</span>
-      <span class="q-title" style="margin-top:6px">На скольких человек</span>${NC.radios('persons', o.persons, p.persons)}</div>
+      <span class="q-note" style="margin-top:4px">Сейчас в аккаунте ${people.length} ${NC.plural(people.length, 'едок', 'едока', 'едоков')}.</span></div>` : ''}
 
     <div class="card q"><span class="q-title">Приёмов пищи</span>${NC.radios('meals', o.meals, p.meals)}
       <span class="q-title" style="margin-top:6px">Супы</span>${NC.radios('soups', o.soups, p.soups)}
@@ -459,7 +480,7 @@ function viewProfile() {
       <span class="q-note">До трёх пунктов.</span>
       ${NC.chips('priorities', o.priorities, p.priorities, state.d.priorityLimit || 3)}</div>
 
-    <div class="card q"><span class="q-title">Доставка</span>
+    ${state.who === 0 ? `<div class="card q"><span class="q-title">Доставка</span>
       <label><span class="mono">Адрес</span><input data-d="address" value="${NC.esc(p.delivery.address)}"></label>
       <div class="grid g3" style="gap:10px">
         <label><span class="mono">Подъезд</span><input data-d="entrance" value="${NC.esc(p.delivery.entrance)}"></label>
@@ -469,14 +490,14 @@ function viewProfile() {
       <label><span class="mono">Комментарий курьеру</span><input data-d="note" value="${NC.esc(p.delivery.note)}"></label>
       <span class="mono" style="margin-top:4px">Окно доставки</span>
       <div class="chips" data-slot>${state.d.slots.map(s =>
-        `<button type="button" class="chip ${p.delivery.slot === s.id ? 'on' : ''}" data-val="${s.id}" style="font-family:var(--mono);font-size:11px">${s.label}</button>`).join('')}</div></div>
+        `<button type="button" class="chip ${p.delivery.slot === s.id ? 'on' : ''}" data-val="${s.id}" style="font-family:var(--mono);font-size:11px">${s.label}</button>`).join('')}</div></div>` : ''}
 
     <div class="card q"><span class="q-title">Что-то ещё</span>
       <textarea data-p="extra" placeholder="Любые пожелания">${NC.esc(p.extra)}</textarea>
       <label><span class="mono">Вес, кг</span><input data-p="weight" value="${NC.esc(p.weight)}" inputmode="decimal"></label></div>
 
     <button class="btn wide" id="save-profile">Сохранить предпочтения</button>
-    <button class="btn ghost wide" id="pause">${c.paused ? 'Возобновить рацион' : 'Поставить рацион на паузу'}</button>
+    ${state.who === 0 ? `<button class="btn ghost wide" id="pause">${c.paused ? 'Возобновить рацион' : 'Поставить рацион на паузу'}</button>` : ''}
   </div>`;
 }
 
@@ -485,7 +506,26 @@ function wire() {
   const id = state.d.client.id;
 
   if (state.tab === 'profile') {
-    const p = state.draft;
+    const p = curProfile();
+
+    const wt = document.querySelector('[data-who]');
+    if (wt) {
+      wt.querySelectorAll('[data-i]').forEach(b => b.onclick = () => { state.who = +b.dataset.i; render(); });
+      const add = wt.querySelector('[data-addmember]');
+      if (add) add.onclick = () => {
+        state.members.push({ name: '', profile: JSON.parse(JSON.stringify(state.d.profile)) });
+        state.who = state.members.length;
+        state.dirty = true; render();
+      };
+    }
+    const mn = document.querySelector('[data-mname]');
+    if (mn) mn.oninput = () => { state.members[state.who - 1].name = mn.value; state.dirty = true; };
+    const dm = document.querySelector('[data-delmember]');
+    if (dm) dm.onclick = () => {
+      if (!confirm('Убрать этого едока? Его анкета удалится.')) return;
+      state.members.splice(state.who - 1, 1);
+      state.who = 0; state.dirty = true; render();
+    };
     NC.bindPickers($('body'), p, () => { state.dirty = true; });
     document.querySelectorAll('[data-p]').forEach(el => el.oninput = () => { p[el.dataset.p] = el.value; state.dirty = true; });
     document.querySelectorAll('[data-d]').forEach(el => el.oninput = () => { p.delivery[el.dataset.d] = el.value; state.dirty = true; });
@@ -520,7 +560,11 @@ function wire() {
     const save = $('save-profile');
     if (save) save.onclick = async () => {
       try {
-        await NC.api('/api/client/' + id + '/profile', { method: 'PUT', body: p });
+        await NC.api('/api/client/' + id + '/profile', { method: 'PUT', body: state.draft });
+        await NC.api('/api/client/' + id + '/members', {
+          method: 'PUT',
+          body: { members: state.members.map((m, i) => ({ id: m.id, name: m.name || 'Едок ' + (i + 2), profile: m.profile })) }
+        });
         state.dirty = false; NC.toast('Предпочтения сохранены'); await reload();
       } catch (e) { NC.toast(e.message); }
     };

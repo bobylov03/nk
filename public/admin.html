@@ -485,7 +485,15 @@ function dossierView() {
           <div class="card col" style="gap:8px"><span class="mono">КБЖУ</span>
             ${p.kbju && p.kbju.on
               ? kv([['Калории', p.kbju.kcal], ['Белки', p.kbju.p], ['Жиры', p.kbju.f], ['Углеводы', p.kbju.c], ['От специалиста', p.kbju.note]])
-              : '<span class="muted" style="font-size:12.5px">Не считает — норма по умолчанию</span>'}</div>
+              : '<span class="muted" style="font-size:12.5px">Не считает — норма по умолчанию</span>'}
+            ${p.kbju && p.kbju.calc && p.kbju.calc.weight ? `<div class="hr" style="margin:4px 0"></div>
+              <span class="mono">Данные калькулятора</span>
+              ${kv([['Пол', p.kbju.calc.sex === 'm' ? 'мужской' : 'женский'],
+                    ['Возраст', p.kbju.calc.age], ['Рост', p.kbju.calc.height + ' см'],
+                    ['Вес', p.kbju.calc.weight + ' кг'],
+                    ['Активность', ({low:'сидячий',light:'лёгкая',mid:'средняя',high:'высокая'})[p.kbju.calc.activity] || ''],
+                    ['Цель', ({lose:'снизить вес',keep:'удержать',gain:'набрать'})[p.kbju.calc.goal] || ''],
+                    ['Рассчитано', p.kbju.calc.at ? NC.dateRu(p.kbju.calc.at.slice(0,10)) : '']])}` : ''}</div>
         </div>
 
         <div class="card col" style="gap:10px">
@@ -553,6 +561,24 @@ function dossierView() {
           <div class="stat-grid">${d.stats.items.map(i =>
             `<div class="stat"><i>${i.icon}</i><b>${i.n}</b><span>${i.label}</span></div>`).join('')}</div>
         </div>
+
+        ${(d.members || []).length ? `<div class="card col" style="gap:12px">
+          <span class="mono">Ещё едоков в аккаунте · ${d.members.length}</span>
+          ${d.members.map(m => {
+            const mp = m.profile;
+            return `<div class="col" style="gap:6px;padding-top:10px;border-top:1px solid var(--line)">
+              <span class="serif" style="font-size:17px">${NC.esc(m.name)} · ${NC.esc(m.dietLabel || '')}</span>
+              ${kv([['Цель', (mp.goals || []).join(', ')],
+                    ['Медицинское', (mp.medical || []).join(', ')],
+                    ['Не ест', (mp.dislikes || []).join(', ')],
+                    ['Любит', (mp.likes || []).join(', ')],
+                    ['Никогда', mp.never],
+                    ['Приёмов в день', mp.meals],
+                    ['Порции', mp.portion],
+                    ['КБЖУ', mp.kbju && mp.kbju.on ? mp.kbju.kcal + ' ккал · Б' + mp.kbju.p + ' Ж' + mp.kbju.f + ' У' + mp.kbju.c : '']])}
+            </div>`;
+          }).join('')}
+        </div>` : ''}
 
         ${p.extra ? `<div class="card col" style="gap:8px"><span class="mono">Комментарий клиента</span>
           <span style="font-size:12.5px;line-height:1.55">${NC.esc(p.extra)}</span></div>` : ''}

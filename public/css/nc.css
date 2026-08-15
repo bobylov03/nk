@@ -670,3 +670,10 @@ textarea{min-height:82px;resize:vertical;font-family:var(--sans);line-height:1.5
 /* коэффициенты цены */
 .pr-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
 .pr-grid input{text-align:center;font-family:var(--mono);font-size:13px}
+
+/* переключатель едоков в анкете */
+.who-tabs{display:flex;gap:6px;margin-bottom:12px;padding:4px;border-radius:100px;background:var(--silk)}
+.who-tabs button{flex:1;min-width:0;padding:10px 8px;border:0;border-radius:100px;cursor:pointer;
+  background:transparent;color:var(--muted);font-family:var(--sans);font-size:13px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:.15s}
+.who-tabs button.on{background:var(--plum);color:var(--champagne)}

@@ -39,6 +39,7 @@
 const QSTEPS = 7;                          // разделов анкеты
 const state = {
   step: 1, welcome: false, data: null, opts: null, orderId: null, order: null,
+  who: 0, people: [],
   form: {
     tariffId: 't14', name: '', phone: '', flat: '', promo: '', promoOk: 0, pay: 'card', clientId: null, known: '', terms: false,
     profile: {
@@ -67,20 +68,23 @@ const CTA = ['Далее', 'Далее', 'Далее', 'Далее', 'Далее
   'Проверить статус', 'Оплатить рацион', 'В личный кабинет'];
 
 const $ = (id) => document.getElementById(id);
-const P = () => state.form.profile;
+/* people[0] — основной клиент, остальные члены семьи. Анкета у каждого своя. */
+const P = () => state.people[state.who].profile;
+const D = () => state.people[0].profile.delivery;   // доставка и график общие
+const PERSONAL = [2, 3, 4, 5, 6];                   // шаги с личной анкетой
 const tariff = () => state.data.tariffs.find(t => t.id === state.form.tariffId) || state.data.tariffs[0];
 const discount = () => state.order ? (state.order.promoDiscount || 0) : (state.form.promoOk || 0);
 const slotOf = (id) => state.data.slots.find(s => s.id === id) || state.data.slots[0];
 const slotExtra = () => +(slotOf(P().delivery.slot).extra || 0);
 /* сколько доставок попадёт в период тарифа при выбранном графике */
 function deliveriesOf(t, p) {
-  const w = (p.weekdays && p.weekdays.length) ? p.weekdays.length : 7;
+  const w = (state.people[0].profile.weekdays || []).length || 7;
   return Math.max(1, Math.round((t.days || 0) * w / 7));
 }
 /* цена = день × доставки × коэффициент за человек × коэффициент за приёмы */
 function tariffSum(t, p) {
   const pr = state.data.pricing || { persons: {}, meals: {} };
-  const kp = +pr.persons[p.persons] || +p.persons || 1;
+  const kp = +pr.persons[state.people.length] || state.people.length || 1;
   const km = +pr.meals[p.meals] || 1;
   return Math.round((t.perDay || 0) * deliveriesOf(t, p) * kp * km);
 }
@@ -90,11 +94,22 @@ const sum = () => {
   return discount() ? Math.round(base * (1 - discount() / 100)) : base;
 };
 
+function blankProfile() {
+  return JSON.parse(JSON.stringify(state.form.profile));
+}
+function setPersons(n) {
+  const cur = state.people.length;
+  if (n > cur) for (let i = cur; i < n; i++) state.people.push({ name: '', profile: blankProfile() });
+  if (n < cur) state.people.length = n;
+  state.who = Math.min(state.who, state.people.length - 1);
+}
+
 async function boot() {
   state.data = await NC.api('/api/public');
   state.opts = state.data.options;
   NC.cur = state.data.content.currency || '₾';
-  P().delivery.slot = state.data.slots[0].id;
+  if (!state.people.length) state.people = [{ name: '', profile: blankProfile() }];
+  D().slot = state.data.slots[0].id;
 
   // норма, рассчитанная калькулятором на главной
   try {
@@ -118,15 +133,18 @@ async function boot() {
   if (id && NC.token()) {
     try {
       const d = await NC.api('/api/client/' + id);
-      applyKnown(d.client, d.profile);
+      applyKnown(d.client, d.profile, d.members);
       state.welcome = true;
     } catch (e) { /* токен протух — покажем обычную анкету */ }
   }
   render();
 }
 
-function applyKnown(client, profile) {
+function applyKnown(client, profile, members) {
   const f = state.form;
+  state.people = [{ name: client.name, profile: JSON.parse(JSON.stringify(profile)) }]
+    .concat((members || []).map(m => ({ name: m.name, profile: JSON.parse(JSON.stringify(m.profile)) })));
+  state.who = 0;
   f.clientId = client.id;
   f.name = client.name;
   f.phone = client.phone;
@@ -157,8 +175,15 @@ function render() {
   $('total').textContent = NC.money(sum());
   $('cta').textContent = CTA[state.step - 1];
   $('back').style.visibility = (state.step === 1 || state.step > QSTEPS) ? 'hidden' : 'visible';
-  $('body').innerHTML = [step1, step2, step3, step4, step5, step6, step7, step8, step9, step10][state.step - 1]();
+  $('body').innerHTML = whoSwitch() + [step1, step2, step3, step4, step5, step6, step7, step8, step9, step10][state.step - 1]();
   wire();
+}
+
+function whoSwitch() {
+  if (state.people.length < 2 || !PERSONAL.includes(state.step)) return '';
+  return `<div class="who-tabs" data-who>${state.people.map((pp, i) =>
+    `<button type="button" class="${state.who === i ? 'on' : ''}" data-i="${i}">${NC.esc(pp.name || (i === 0 ? 'Вы' : 'Едок ' + (i + 1)))}</button>`).join('')}</div>
+    <span class="q-note" style="margin:-4px 0 2px">Заполняется анкета: <b>${NC.esc(state.people[state.who].name || (state.who === 0 ? 'вы' : 'едок ' + (state.who + 1)))}</b></span>`;
 }
 
 /* ---------- экран повторного клиента ---------- */
@@ -214,13 +239,18 @@ function step1() {
       ${NC.radios('meals', o.meals, P().meals)}
       <span class="q-note">${P().meals === 3 ? 'Завтрак, обед, ужин' : P().meals === 4 ? 'Завтрак, обед, ужин и перекус' : 'Полный день с двумя перекусами'}</span>
       <span class="q-title" style="margin-top:8px">На скольких человек?</span>
-      ${NC.radios('persons', o.persons, P().persons)}
-      <span class="q-note">Для пар готовим двойные порции каждого блюда.</span>
+      <div class="chips" data-persons>${o.persons.map(n =>
+        `<button type="button" class="chip ${state.people.length === n ? 'on' : ''}" data-val="${n}">${n}</button>`).join('')}</div>
+      <span class="q-note">У каждого будет своя анкета: аллергии, вкусы и цель могут отличаться.</span>
+      ${state.people.length > 1 ? `<div class="col" style="gap:8px;margin-top:4px">
+        ${state.people.map((pp, i) => `<label><span class="mono">${i === 0 ? 'Вы' : 'Едок ' + (i + 1)}</span>
+          <input data-pname="${i}" value="${NC.esc(pp.name)}" placeholder="${i === 0 ? 'Нино' : 'Давид'}"></label>`).join('')}
+      </div>` : ''}
     </div>
     <div class="card q">
       <span class="q-title">В какие дни привозить?</span>
-      <span class="q-note">Платите только за те дни, когда привозим. Сейчас выбрано ${P().weekdays.length} ${NC.plural(P().weekdays.length, 'день', 'дня', 'дней')} в неделю.</span>
-      ${NC.days(o.weekdays, P().weekdays)}
+      <span class="q-note">Платите только за те дни, когда привозим. Сейчас выбрано ${state.people[0].profile.weekdays.length} ${NC.plural(state.people[0].profile.weekdays.length, 'день', 'дня', 'дней')} в неделю.</span>
+      ${NC.days(o.weekdays, state.people[0].profile.weekdays)}
     </div>
     <button class="btn ghost sm" id="known" style="align-self:flex-start">Я уже заказывал(а) — подставить профиль</button>
   </div>`;
@@ -339,7 +369,7 @@ function step6() {
 
 /* ---------- 7. доставка и контакты ---------- */
 function step7() {
-  const f = state.form, d = P().delivery;
+  const f = state.form, d = D();
   return `<div class="col fade" style="gap:14px">
     <div class="card q">
       <span class="q-title">Контакты</span>
@@ -443,7 +473,7 @@ function summary(o) {
   const rows = [
     ['Рацион', t.name + ' · ' + (o.planDays || deliveriesOf(t, p)) + ' ' + NC.plural(o.planDays || deliveriesOf(t, p), 'доставка', 'доставки', 'доставок')],
     ['Приёмов в день', String(o.meals || p.meals)],
-    ['Человек', (o.persons || p.persons) > 1 ? String(o.persons || p.persons) : ''],
+    ['Человек', state.people.length > 1 ? state.people.map(x => x.name || 'без имени').join(', ') : ''],
     ['Тип питания', dietName(p.diet)],
     ['Цель', (p.goals || []).join(', ')],
     ['Медицинское', (p.medical || []).join(', ')],
@@ -471,8 +501,15 @@ function wire() {
   document.querySelectorAll('[data-pay]').forEach(el => el.onclick = () => { f.pay = el.dataset.pay; render(); });
   document.querySelectorAll('[data-f]').forEach(el => el.oninput = () => { f[el.dataset.f] = el.value; });
   document.querySelectorAll('[data-p]').forEach(el => el.oninput = () => { p[el.dataset.p] = el.value; });
-  document.querySelectorAll('[data-d]').forEach(el => el.oninput = () => { p.delivery[el.dataset.d] = el.value; });
+  document.querySelectorAll('[data-d]').forEach(el => el.oninput = () => { D()[el.dataset.d] = el.value; });
   document.querySelectorAll('[data-k]').forEach(el => el.oninput = () => { p.kbju[el.dataset.k] = el.value; });
+
+  const wt = document.querySelector('[data-who]');
+  if (wt) wt.querySelectorAll('button').forEach(b => b.onclick = () => { state.who = +b.dataset.i; render(); });
+
+  const pw = document.querySelector('[data-persons]');
+  if (pw) pw.querySelectorAll('.chip').forEach(b => b.onclick = () => { setPersons(+b.dataset.val); render(); });
+  document.querySelectorAll('[data-pname]').forEach(el => el.oninput = () => { state.people[+el.dataset.pname].name = el.value; });
 
   const dt = document.querySelector('[data-diet]');
   if (dt) dt.querySelectorAll('.diet').forEach(b => b.onclick = () => {
@@ -491,13 +528,15 @@ function wire() {
   if (cf) NC.bindCalc(cf, p.kbju, () => render());   // перерисовка только после «использовать»
 
   const sl = document.querySelector('[data-slot]');
-  if (sl) sl.querySelectorAll('.chip').forEach(b => b.onclick = () => { p.delivery.slot = b.dataset.val; render(); });
+  if (sl) sl.querySelectorAll('.chip').forEach(b => b.onclick = () => { D().slot = b.dataset.val; render(); });
 
   const dw = document.querySelector('[data-days]');
   if (dw) dw.querySelectorAll('button').forEach(b => b.onclick = () => {
-    const n = +b.dataset.n, i = p.weekdays.indexOf(n);
-    if (i >= 0) { if (p.weekdays.length === 1) return NC.toast('Оставьте хотя бы один день'); p.weekdays.splice(i, 1); }
-    else p.weekdays.push(n);
+    const w = state.people[0].profile.weekdays;
+    const n = +b.dataset.n, i = w.indexOf(n);
+    if (i >= 0) { if (w.length === 1) return NC.toast('Оставьте хотя бы один день'); w.splice(i, 1); }
+    else w.push(n);
+    state.people.forEach(pp => { pp.profile.weekdays = w.slice(); });
     render();                       // от графика зависит число доставок и цена
   });
 
@@ -511,7 +550,7 @@ function wire() {
     try {
       const r = await NC.api('/api/client/lookup', { method: 'POST', body: { phone } });
       if (!r.found) return NC.toast('Не нашли такой телефон — заполните анкету');
-      applyKnown({ id: r.clientId, name: r.name, phone: phone, kitchen: r.kitchen }, r.profile);
+      applyKnown({ id: r.clientId, name: r.name, phone: phone, kitchen: r.kitchen }, r.profile, r.members);
       state.welcome = true; render();
     } catch (e) { NC.toast(e.message); }
   };
@@ -538,9 +577,16 @@ $('cta').onclick = async () => {
     if (state.step === QSTEPS) {
       if (!f.name || !f.phone || !p.delivery.address) return NC.toast('Заполните имя, телефон и адрес');
       if (!f.terms) return NC.toast('Примите Условия сервиса');
+      const main = state.people[0].profile;
+      state.people.forEach(pp => {
+        pp.profile.delivery = JSON.parse(JSON.stringify(main.delivery));
+        pp.profile.weekdays = main.weekdays.slice();
+      });
       const body = {
-        name: f.name, phone: f.phone, flat: p.delivery.intercom, promo: f.promo,
-        tariffId: f.tariffId, clientId: f.clientId, profile: p, terms: f.terms, slot: p.delivery.slot
+        name: f.name, phone: f.phone, flat: main.delivery.intercom, promo: f.promo,
+        tariffId: f.tariffId, clientId: f.clientId, terms: f.terms, slot: main.delivery.slot,
+        profile: main,
+        members: state.people.slice(1).map((pp, i) => ({ name: pp.name || 'Едок ' + (i + 2), profile: pp.profile }))
       };
       const r = await NC.api('/api/orders', { method: 'POST', body: body });
       state.order = r.order; state.orderId = r.order.id;
