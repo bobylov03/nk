@@ -76,7 +76,7 @@ async function reload() {
 function render() {
   const c = state.d.client;
   $('hello').textContent = c.kitchen;
-  $('sub').textContent = 'NC · ' + c.planDays + ' дней · ' + NC.dateRu(state.d.today.date, { weekday: 'long', day: 'numeric', month: 'short' });
+  $('sub').textContent = 'NC · ' + c.planDays + ' ' + NC.plural(c.planDays, 'доставка', 'доставки', 'доставок') + ' · ' + NC.dateRu(state.d.today.date, { weekday: 'long', day: 'numeric', month: 'short' });
   $('tabs').innerHTML = [['today', '◉', 'Сегодня'], ['tomorrow', '◐', 'Завтра'], ['collection', '❤', 'Фавориты'],
     ['stats', '▤', 'Статистика'], ['profile', '◇', 'Профиль']]
     .map(([id, ic, label]) => `<button class="${state.tab === id ? 'on' : ''}" data-tab="${id}"><span style="font-size:16px">${ic}</span>${label}</button>`).join('');
@@ -111,7 +111,7 @@ function cycleCard() {
     <span class="serif t">${NC.esc(state.d.cycleTitle)}</span>
     <span class="tx">${NC.esc(text)}</span>
     <div class="cycle-nums">
-      <span><b>${cy.days}</b><s>дней доставки</s></span>
+      <span><b>${cy.days}</b><s>${NC.plural(cy.days, 'доставка', 'доставки', 'доставок')}</s></span>
       <span><b>${cy.dishes}</b><s>${NC.plural(cy.dishes, 'блюдо', 'блюда', 'блюд')}</s></span>
       ${cy.rated ? `<span><b>${cy.rated}</b><s>${NC.plural(cy.rated, 'оценка', 'оценки', 'оценок')}</s></span>` : ''}
     </div>
@@ -125,12 +125,12 @@ function planCard() {
   const pct = Math.round(c.daysLeft / Math.max(1, c.planDays) * 100);
   return `<div class="card col" style="gap:16px">
     <div class="row" style="justify-content:space-between">
-      <span class="mono">Рацион · осталось</span><span style="font-size:11px;letter-spacing:.1em">NC · ${c.planDays} дней</span>
+      <span class="mono">Рацион · осталось</span><span style="font-size:11px;letter-spacing:.1em">NC · ${c.planDays} ${NC.plural(c.planDays, 'доставка', 'доставки', 'доставок')}</span>
     </div>
     <div class="row plan-body" style="gap:18px">
       <div class="ring" style="background:conic-gradient(var(--plum) ${pct}%, rgba(74,36,61,.12) 0)">
         <div class="ring-in">
-          <span class="serif">${c.daysLeft}</span><span class="mono">ДНЕЙ</span>
+          <span class="serif">${c.daysLeft}</span><span class="mono">ДОСТАВОК</span>
         </div>
       </div>
       <div class="col" style="gap:8px;flex:1;min-width:0">

@@ -315,7 +315,7 @@
         <span class="muted" style="font-size:13px">${NC.cur} в день</span>
       </div>
       <div class="col muted" style="gap:7px;font-size:13.5px">
-        <span>${t.meals} приёма пищи в день</span><span>${t.days} дней рациона</span><span>Запрос замены и пауза</span>
+        <span>${t.meals} приёма пищи в день</span><span>${t.days} дней рациона</span><span>График доставки на выбор</span>
       </div>
       <div class="row" style="justify-content:space-between;align-items:baseline;padding-top:16px;border-top:1px solid var(--gold);margin-top:auto">
         <span class="mono">Итого</span><span class="serif" style="font-size:26px">${'от ' + NC.money((data.tariffsFrom.find(x => x.id === t.id) || {}).from ?? t.perDay * t.days)}</span>

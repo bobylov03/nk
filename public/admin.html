@@ -461,6 +461,7 @@ function dossierView() {
                 ['Последняя доставка', d.lastDelivery ? NC.dateRu(d.lastDelivery.slice(0, 10)) : ''],
                 ['Вес', p.weight && p.weight + ' кг'], ['Размер порций', p.portion],
                 ['График доставки', (p.weekdays || []).length < 7 ? (p.weekdays || []).length + ' дней в неделю' : 'каждый день'],
+                ['Оплачено доставок', c.planDays],
                 ['Персон', p.persons > 1 ? p.persons : ''],
                 ['Съедено за цикл', d.cycle ? d.cycle.dishes + ' блюд за ' + d.cycle.days + ' дней' : ''],
                 ['Цель', (p.goals || []).join(', ')],

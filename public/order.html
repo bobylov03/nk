@@ -72,17 +72,18 @@ const tariff = () => state.data.tariffs.find(t => t.id === state.form.tariffId) 
 const discount = () => state.order ? (state.order.promoDiscount || 0) : (state.form.promoOk || 0);
 const slotOf = (id) => state.data.slots.find(s => s.id === id) || state.data.slots[0];
 const slotExtra = () => +(slotOf(P().delivery.slot).extra || 0);
-/* цена = день × дни × коэффициент за человек × коэффициент за приёмы */
+/* сколько доставок попадёт в период тарифа при выбранном графике */
+function deliveriesOf(t, p) {
+  const w = (p.weekdays && p.weekdays.length) ? p.weekdays.length : 7;
+  return Math.max(1, Math.round((t.days || 0) * w / 7));
+}
+/* цена = день × доставки × коэффициент за человек × коэффициент за приёмы */
 function tariffSum(t, p) {
   const pr = state.data.pricing || { persons: {}, meals: {} };
   const kp = +pr.persons[p.persons] || +p.persons || 1;
   const km = +pr.meals[p.meals] || 1;
-  return Math.round((t.perDay || 0) * (t.days || 0) * kp * km);
+  return Math.round((t.perDay || 0) * deliveriesOf(t, p) * kp * km);
 }
-const fromPrice = (t) => {
-  const f = (state.data.tariffsFrom || []).find(x => x.id === t.id);
-  return f ? f.from : tariffSum(t, { persons: 1, meals: 3 });
-};
 const sum = () => {
   if (state.order) return state.order.sum;
   const base = tariffSum(tariff(), P()) + slotExtra();
@@ -199,10 +200,13 @@ function step1() {
     ${state.data.tariffs.map(t => `
       <div class="card row ${t.id === f.tariffId ? 'sel' : ''}" data-tariff="${t.id}" style="cursor:pointer;gap:14px">
         <span style="width:20px;height:20px;border-radius:50%;border:1px solid ${t.id === f.tariffId ? 'var(--gold-solid)' : 'rgba(74,36,61,.3)'};background:${t.id === f.tariffId ? 'var(--gold-solid)' : 'transparent'}"></span>
-        <span class="col" style="flex:1;gap:3px"><span class="serif" style="font-size:20px">${NC.esc(t.name)}</span><span class="muted" style="font-size:12px">${t.days} дней · ${t.perDay} ${NC.cur}/день</span></span>
+        <span class="col" style="flex:1;gap:3px">
+          <span class="serif" style="font-size:20px">${NC.esc(t.name)}</span>
+          <span class="muted" style="font-size:12px">${deliveriesOf(t, P())} ${NC.plural(deliveriesOf(t, P()), 'доставка', 'доставки', 'доставок')} за ${t.days} ${NC.plural(t.days, 'день', 'дня', 'дней')} · ${t.perDay} ${NC.cur}/день</span>
+        </span>
         <span class="col" style="align-items:flex-end;gap:1px;flex:0 0 auto">
-          <span class="serif" style="font-size:22px;white-space:nowrap">${t.id === f.tariffId ? NC.money(tariffSum(t, P())) : 'от ' + NC.money(fromPrice(t))}</span>
-          ${t.id === f.tariffId && P().persons > 1 ? `<span class="mono" style="font-size:8.5px">на ${P().persons} чел.</span>` : ''}
+          <span class="serif" style="font-size:22px;white-space:nowrap">${NC.money(tariffSum(t, P()))}</span>
+          ${P().persons > 1 ? `<span class="mono" style="font-size:8.5px">на ${P().persons} чел.</span>` : ''}
         </span>
       </div>`).join('')}
     <div class="card q">
@@ -215,7 +219,7 @@ function step1() {
     </div>
     <div class="card q">
       <span class="q-title">В какие дни привозить?</span>
-      <span class="q-note">Можно получать рацион не каждый день — программа продлится на пропущенные дни.</span>
+      <span class="q-note">Платите только за те дни, когда привозим. Сейчас выбрано ${P().weekdays.length} ${NC.plural(P().weekdays.length, 'день', 'дня', 'дней')} в неделю.</span>
       ${NC.days(o.weekdays, P().weekdays)}
     </div>
     <button class="btn ghost sm" id="known" style="align-self:flex-start">Я уже заказывал(а) — подставить профиль</button>
@@ -437,7 +441,7 @@ function summary(o) {
   const d = p.delivery || {};
   const slot = (state.data.slots.find(s => s.id === (o.slot || d.slot)) || {}).label || '';
   const rows = [
-    ['Рацион', t.name + ' · ' + (o.planDays || t.days) + ' дней'],
+    ['Рацион', t.name + ' · ' + (o.planDays || deliveriesOf(t, p)) + ' ' + NC.plural(o.planDays || deliveriesOf(t, p), 'доставка', 'доставки', 'доставок')],
     ['Приёмов в день', String(o.meals || p.meals)],
     ['Человек', (o.persons || p.persons) > 1 ? String(o.persons || p.persons) : ''],
     ['Тип питания', dietName(p.diet)],
@@ -449,7 +453,7 @@ function summary(o) {
     ['Телефон', o.phone || f.phone],
     ['Адрес', [d.address, d.entrance && 'подъезд ' + d.entrance, d.floor && 'этаж ' + d.floor].filter(Boolean).join(', ')],
     ['Окно доставки', slot + (o.slotNote || p.slotNote ? ' · ' + (o.slotNote || p.slotNote) : '')],
-    ['Дней доставки в неделю', (p.weekdays || []).length < 7 ? (p.weekdays || []).length + ' из 7' : ''],
+    ['График', (p.weekdays || []).length < 7 ? (p.weekdays || []).length + ' дней в неделю' : 'каждый день'],
     ['Персон', (o.profile || p).persons > 1 ? (o.profile || p).persons : ''],
     ['Индивидуальное время', (o.slotExtra || slotExtra()) ? '+' + (o.slotExtra || slotExtra()) + ' ' + NC.cur : ''],
     ['Промокод', (o.promo || f.promo) ? (o.promo || f.promo) + ((o.promoDiscount || f.promoOk) ? ' · −' + (o.promoDiscount || f.promoOk) + '%' : ' · не сработал') : ''],
@@ -494,7 +498,7 @@ function wire() {
     const n = +b.dataset.n, i = p.weekdays.indexOf(n);
     if (i >= 0) { if (p.weekdays.length === 1) return NC.toast('Оставьте хотя бы один день'); p.weekdays.splice(i, 1); }
     else p.weekdays.push(n);
-    b.classList.toggle('on');
+    render();                       // от графика зависит число доставок и цена
   });
 
   const tc = $('terms');
