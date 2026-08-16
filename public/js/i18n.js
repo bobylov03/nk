@@ -80,7 +80,25 @@
       /* общее */
       'На главную': 'Back to home',
       'Загружаем…': 'Loading…',
-      'Остались вопросы?': 'Any questions?'
+      'Остались вопросы?': 'Any questions?',
+      'Сегодня уже готовлю для': 'Cooking today for',
+      'Осталось на следующий цикл': 'Spots left for the next cycle',
+      'Следующий набор стартует': 'Next intake starts',
+      'клиентов': 'clients', 'мест': 'spots',
+      'Персональный рацион': 'A plan made for you',
+      'Новое меню каждые 10 дней': 'New menu every 10 days',
+      'Доставка по Тбилиси': 'Delivery across Tbilisi',
+      'Индивидуальное КБЖУ': 'Personal macro targets',
+      'Свежий рацион на каждый день, приготовленный под вас':
+        'Fresh meals every day, cooked around you',
+      'Меню придумываю я, а не конвейер': 'I design the menu myself — no conveyor belt',
+      'Персональный шеф': 'Your personal chef',
+      'Заполняете анкету': 'Fill in the form',
+      'Мы подтверждаем заявку': 'We confirm your request',
+      'Курьер привозит день': 'The courier brings your day',
+      'Меняете и ставите паузу': 'Swap dishes or pause anytime',
+      'Понравилось увиденное?': 'Like what you see?',
+      'Добавить к ближайшей доставке': 'Add to your next delivery'
     },
 
     ka: {
@@ -155,7 +173,25 @@
 
       'На главную': 'მთავარ გვერდზე',
       'Загружаем…': 'იტვირთება…',
-      'Остались вопросы?': 'გაქვთ კითხვები?'
+      'Остались вопросы?': 'გაქვთ კითხვები?',
+      'Сегодня уже готовлю для': 'დღეს ვამზადებ',
+      'Осталось на следующий цикл': 'დარჩა შემდეგ ციკლზე',
+      'Следующий набор стартует': 'შემდეგი ნაკრები იწყება',
+      'клиентов': 'კლიენტისთვის', 'мест': 'ადგილი',
+      'Персональный рацион': 'პერსონალური რაციონი',
+      'Новое меню каждые 10 дней': 'ახალი მენიუ ყოველ 10 დღეში',
+      'Доставка по Тбилиси': 'მიტანა თბილისში',
+      'Индивидуальное КБЖУ': 'ინდივიდუალური კბჟუ',
+      'Свежий рацион на каждый день, приготовленный под вас':
+        'ახალი რაციონი ყოველდღე, მომზადებული თქვენთვის',
+      'Меню придумываю я, а не конвейер': 'მენიუს მე ვქმნი, და არა კონვეიერი',
+      'Персональный шеф': 'პერსონალური შეფი',
+      'Заполняете анкету': 'ავსებთ ანკეტას',
+      'Мы подтверждаем заявку': 'ჩვენ ვადასტურებთ განაცხადს',
+      'Курьер привозит день': 'კურიერი მოგიტანთ დღეს',
+      'Меняете и ставите паузу': 'ცვლით კერძებს ან აჩერებთ',
+      'Понравилось увиденное?': 'მოგეწონათ?',
+      'Добавить к ближайшей доставке': 'დამატება უახლოეს მიტანასთან'
     }
   };
 
@@ -209,8 +245,9 @@
     /* Переводит статический текст: элементы с data-tr и всё внутри них */
     apply(root) {
       if (lang === 'ru') return;
-      const scope = root || document;
-      scope.querySelectorAll('[data-tr], [data-tr] *').forEach(el => {
+      const scope = root || document.body;
+      const walk = (el) => {
+        if (el.tagName === 'SCRIPT' || el.tagName === 'STYLE') return;
         for (const node of el.childNodes) {
           if (node.nodeType === 3) {
             const t = node.nodeValue.trim();
@@ -218,9 +255,18 @@
               const r = NCI18N.t(t);
               if (r !== t) node.nodeValue = node.nodeValue.replace(t, r);
             }
-          }
+          } else if (node.nodeType === 1) walk(node);
         }
-      });
+        // подписи и подсказки тоже переводим
+        ['placeholder', 'title', 'aria-label'].forEach(a => {
+          const v = el.getAttribute && el.getAttribute(a);
+          if (v) {
+            const r = NCI18N.t(v.trim());
+            if (r !== v.trim()) el.setAttribute(a, r);
+          }
+        });
+      };
+      walk(scope);
     },
     bind(host) {
       (host || document).querySelectorAll('[data-lang]').forEach(b => {

@@ -67,7 +67,7 @@
 
 <div class="nav" id="nav">
   <a href="/" style="border:0" id="logo"></a>
-  <nav id="nav-menu" data-tr>
+  <nav id="nav-menu">
     <a href="#menu" style="border:0">Меню дня</a>
     <a href="/collection.html" style="border:0">Коллекция</a>
     <a href="/extra.html" style="border:0">NC EXTRA</a>
@@ -215,10 +215,10 @@
   const data = await NC.api('/api/public');
   const c = data.content;
   NC.cur = c.currency || '₾';
-  document.getElementById('kicker').textContent = NC.pick(c, 'hero_kicker');
-  document.getElementById('title').textContent = NC.pick(c, 'hero_title');
-  document.getElementById('text').textContent = NC.pick(c, 'hero_text');
-  document.getElementById('cta').textContent = NC.pick(c, 'hero_cta');
+  document.getElementById('kicker').textContent = NC.pick(c, 'hero_kicker') || '';
+  document.getElementById('title').textContent = NC.t(NC.pick(c, 'hero_title') || '');
+  document.getElementById('text').textContent = NC.pick(c, 'hero_text') || '';
+  document.getElementById('cta').textContent = NC.t(NC.pick(c, 'hero_cta') || '');
   document.getElementById('menu-note').textContent = NC.pick(c, 'menu_note');
   document.getElementById('del-title').textContent = NC.pick(c, 'delivery_title');
   document.getElementById('del-text').textContent = NC.pick(c, 'delivery_text');
@@ -261,18 +261,19 @@
   addEventListener('keydown', (e) => { if (e.key === 'Escape') closeCalc(); });
 
   // преимущества: строки «иконка Текст» из админки
-  const perks = String(c.hero_badges || '').split('\n').map(x => x.trim()).filter(Boolean);
+  const perks = String(NC.pick(c, 'hero_badges') || '').split('\n').map(x => x.trim()).filter(Boolean);
   document.getElementById('perks').innerHTML = perks.map(line => {
     const m = line.match(/^(\S+)\s+(.+)$/);
     const icon = m ? m[1] : '•', text = m ? m[2] : line;
-    return `<span class="perk"><i>${icon}</i>${NC.esc(text)}</span>`;
+    return `<span class="perk"><i>${icon}</i>${NC.esc(NC.t(text))}</span>`;
   }).join('');
 
   // живой блок: показываем только заполненные пункты
+  const unit = (n, one, few, many) => NC.lang() === 'ru' ? NC.plural(n, one, few, many) : NC.t(many);
   const live = [
-    c.live_clients && ['👨‍🍳', 'Сегодня уже готовлю для', c.live_clients + ' ' + NC.plural(+c.live_clients, 'клиента', 'клиентов', 'клиентов')],
-    c.live_slots && ['🥗', 'Осталось на следующий цикл', c.live_slots + ' ' + NC.plural(+c.live_slots, 'место', 'места', 'мест')],
-    c.live_start && ['📅', 'Следующий набор стартует', c.live_start]
+    c.live_clients && ['👨‍🍳', NC.t('Сегодня уже готовлю для'), c.live_clients + ' ' + unit(+c.live_clients, 'клиента', 'клиентов', 'клиентов')],
+    c.live_slots && ['🥗', NC.t('Осталось на следующий цикл'), c.live_slots + ' ' + unit(+c.live_slots, 'место', 'места', 'мест')],
+    c.live_start && ['📅', NC.t('Следующий набор стартует'), c.live_start]
   ].filter(Boolean);
   if (live.length) {
     const box = document.getElementById('live');
@@ -283,7 +284,7 @@
 
   ['about_kicker', 'about_title', 'about_text', 'about_sign'].forEach(k => {
     const el = document.getElementById(k.replace('_', '-'));
-    if (el) el.textContent = c[k] || '';
+    if (el) el.textContent = NC.t(NC.pick(c, k) || '');
   });
   if (c.about_photo) {
     const ph = document.getElementById('about-photo');
