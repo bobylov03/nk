@@ -677,3 +677,14 @@ textarea{min-height:82px;resize:vertical;font-family:var(--sans);line-height:1.5
   background:transparent;color:var(--muted);font-family:var(--sans);font-size:13px;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:.15s}
 .who-tabs button.on{background:var(--plum);color:var(--champagne)}
+
+/* переключатель языка */
+.lang{display:flex;gap:2px;padding:3px;border-radius:100px;background:var(--silk);flex:0 0 auto}
+.lang button{padding:6px 10px;border:0;border-radius:100px;cursor:pointer;background:transparent;
+  color:var(--muted);font-family:var(--mono);font-size:10px;letter-spacing:.08em;transition:.15s}
+.lang button.on{background:var(--plum);color:var(--champagne)}
+.lang button:hover:not(.on){color:var(--plum)}
+@media (max-width:760px){
+  .nav #lang-box{order:2}
+  .lang button{padding:6px 8px;font-size:9.5px}
+}

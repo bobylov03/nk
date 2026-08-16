@@ -23,7 +23,7 @@
 
 <div class="nav" id="nav">
   <a href="/" style="border:0" id="logo"></a>
-  <nav id="nav-menu">
+  <nav id="nav-menu" data-tr>
     <a href="/#menu" style="border:0">Меню дня</a>
     <a href="/collection.html" style="border:0">Коллекция</a>
     <a href="/#how" style="border:0">Как это работает</a>
@@ -34,6 +34,7 @@
     <a class="btn ghost sm" href="/cabinet.html" style="border-bottom:1px solid rgba(74,36,61,.28)">Моя кухня</a>
     <a class="btn sm" href="/order.html" style="border:0">Оформить рацион</a>
   </div>
+  <div id="lang-box"></div>
   <button class="burger" id="burger" aria-label="Меню" aria-expanded="false" aria-controls="nav-menu"><i></i></button>
 </div>
 
@@ -65,17 +66,23 @@
   <a class="mono" href="/terms.html" style="border-bottom:1px solid var(--line)">Условия сервиса</a>
 </div>
 
+<script src="/js/i18n.js"></script>
 <script src="/js/nc.js"></script>
 <script src="/js/nav.js"></script>
 <script src="/js/dish-sheet.js"></script>
 <script>
-const RU = { breakfast: 'Завтрак', lunch: 'Обед', dinner: 'Ужин', snack: 'Перекус' };
-const FILTERS = [['all', 'Все'], ['breakfast', 'Завтраки'], ['lunch', 'Обеды'], ['dinner', 'Ужины'], ['snack', 'Перекусы']];
+const RU = { breakfast: NC.t('Завтрак'), lunch: NC.t('Обед'), dinner: NC.t('Ужин'), snack: NC.t('Перекус') };
+const FILTERS = [['all', 'Все'], ['breakfast', 'Завтраки'], ['lunch', 'Обеды'], ['dinner', 'Ужины'], ['snack', 'Перекусы']]
+  .map(([id, l]) => [id, NC.t(l)]);
 const state = { cat: 'all', dishes: [], fav: [], rates: {}, client: null };
 const $ = (id) => document.getElementById(id);
 
 (async function () {
   $('logo').innerHTML = NC.logo();
+  document.getElementById('lang-box').innerHTML = NCI18N.switcher();
+  NCI18N.bind();
+  NCI18N.apply();
+
   const pub = await NC.api('/api/public');
   $('footer').textContent = pub.content.footer || '';
   NC.socials($('socials'), pub.content);
@@ -111,19 +118,19 @@ function render() {
         ${state.rates[d.id] && state.rates[d.id].stars ? `<span class="own-stars">${'★'.repeat(state.rates[d.id].stars)}</span>` : ''}
       </div>
       <figcaption>
-        <span class="serif">${NC.esc(d.name)}</span>
+        <span class="serif">${NC.esc(NC.pick(d, 'name'))}</span>
         <span class="mono">${RU[d.cat] || ''}</span>
       </figcaption>
     </figure>`).join('') || `<div class="card col" style="gap:10px;grid-column:1/-1">
       <span style="font-size:13.5px;line-height:1.6">${state.dishes.length
-        ? 'В этой категории пока нет блюд.'
-        : 'Коллекция наполняется — совсем скоро здесь появятся блюда из моих рационов.'}</span>
+        ? NC.t('В этой категории пока нет блюд.')
+        : NC.t('Коллекция наполняется — совсем скоро здесь появятся блюда из моих рационов.')}</span>
       ${state.dishes.length ? '' : '<a class="btn sm" href="/order.html" style="border:0;align-self:flex-start">Оформить рацион</a>'}
     </div>`;
 
-  $('hint').textContent = state.client
+  $('hint').textContent = NC.t(state.client
     ? 'Нажмите на блюдо, чтобы увидеть состав и КБЖУ. Сердечком отмечайте то, что хотите видеть чаще.'
-    : 'Нажмите на блюдо, чтобы увидеть состав и КБЖУ.';
+    : 'Нажмите на блюдо, чтобы увидеть состав и КБЖУ.');
 
   document.querySelectorAll('[data-open]').forEach(el => el.onclick = (e) => {
     if (e.target.closest('[data-fav]')) return;
@@ -154,10 +161,10 @@ function openDish(id) {
   const r = state.rates[d.id];
 
   const rows = [
-    ['Состав', d.ing || '—'],
-    ['Вес порции', d.weight ? d.weight + ' г' : '—'],
-    ['Аллергены', found.join(', ') || 'не обнаружены'],
-    ['Особенности питания', (d.tags || []).join(' · ') || '—']
+    [NC.t('Состав'), NC.pick(d, 'ing') || '—'],
+    [NC.t('Вес порции'), d.weight ? d.weight + ' г' : '—'],
+    [NC.t('Аллергены'), found.join(', ') || NC.t('не обнаружены')],
+    [NC.t('Особенности питания'), (d.tags || []).join(' · ') || '—']
   ];
   const macros = [[d.kcal, 'ккал'], [d.p + ' г', 'белки'], [d.f + ' г', 'жиры'], [d.c + ' г', 'углеводы']];
 
@@ -172,20 +179,20 @@ function openDish(id) {
       ${state.client ? `<button class="heart ${state.fav.includes(d.id) ? 'on' : ''}" data-fav="${d.id}" aria-label="В любимые">♥</button>` : ''}
     </div>
     <div class="col" style="gap:8px">
-      <span class="serif" style="font-size:clamp(24px,4vw,30px);line-height:1.12">${NC.esc(d.name)}</span>
-      ${d.desc ? `<span class="muted" style="font-size:14px;line-height:1.6">${NC.esc(d.desc)}</span>` : ''}
+      <span class="serif" style="font-size:clamp(24px,4vw,30px);line-height:1.12">${NC.esc(NC.pick(d, 'name'))}</span>
+      ${d.desc ? `<span class="muted" style="font-size:14px;line-height:1.6">${NC.esc(NC.pick(d, 'desc'))}</span>` : ''}
     </div>
     ${r && (r.stars || r.mark) ? `<div class="own-note">
       ${r.stars ? `<span style="color:var(--gold-solid)">${'★'.repeat(r.stars)}</span>` : ''}
-      <span>Ваша оценка${r.mark === 'love' ? ' · в любимых' : r.mark === 'never' ? ' · больше не готовить' : r.mark === 'repeat' ? ' · можно повторить' : ''}</span>
+      <span>${NC.t('Ваша оценка')}${r.mark === 'love' ? ' · в любимых' : r.mark === 'never' ? ' · больше не готовить' : r.mark === 'repeat' ? ' · можно повторить' : ''}</span>
     </div>` : ''}
     <div class="macro4">${macros.map(m =>
       `<div><span class="serif" style="font-size:22px;line-height:1">${m[0]}</span><span class="mono" style="font-size:8px">${m[1]}</span></div>`).join('')}</div>
     <div class="card col" style="gap:14px">${rows.map(x =>
       `<div class="col" style="gap:5px"><span class="mono">${x[0]}</span><span style="font-size:13.5px;line-height:1.55">${NC.esc(x[1])}</span></div>`).join('')}</div>
     ${d.why ? `<div class="chef-note">
-      <span class="mono" style="color:rgba(220,192,166,.6)">Заметка шефа</span>
-      <span class="serif" style="font-size:18px;line-height:1.45;color:var(--champagne)">${NC.esc(d.why)}</span>
+      <span class="mono" style="color:rgba(220,192,166,.6)">${NC.t('Заметка шефа')}</span>
+      <span class="serif" style="font-size:18px;line-height:1.45;color:var(--champagne)">${NC.esc(NC.pick(d, 'why'))}</span>
     </div>` : ''}
   </div>`;
 

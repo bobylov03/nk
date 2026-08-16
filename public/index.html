@@ -67,7 +67,7 @@
 
 <div class="nav" id="nav">
   <a href="/" style="border:0" id="logo"></a>
-  <nav id="nav-menu">
+  <nav id="nav-menu" data-tr>
     <a href="#menu" style="border:0">Меню дня</a>
     <a href="/collection.html" style="border:0">Коллекция</a>
     <a href="/extra.html" style="border:0">NC EXTRA</a>
@@ -80,6 +80,7 @@
     <a class="btn ghost sm" href="/cabinet.html" style="border-bottom:1px solid rgba(74,36,61,.28)">Моя кухня</a>
     <a class="btn sm" href="/order.html" style="border:0">Оформить рацион</a>
   </div>
+  <div id="lang-box"></div>
   <button class="burger" id="burger" aria-label="Меню" aria-expanded="false" aria-controls="nav-menu"><i></i></button>
 </div>
 
@@ -200,22 +201,27 @@
   <a class="mono" href="/terms.html" style="border-bottom:1px solid var(--line)">Условия сервиса</a>
 </div>
 
+<script src="/js/i18n.js"></script>
 <script src="/js/nc.js"></script>
 <script src="/js/nav.js"></script>
 <script src="/js/dish-sheet.js"></script>
 <script>
 (async function () {
   document.getElementById('logo').innerHTML = NC.logo();
+  document.getElementById('lang-box').innerHTML = NCI18N.switcher();
+  NCI18N.bind();
+  NCI18N.apply();
+
   const data = await NC.api('/api/public');
   const c = data.content;
   NC.cur = c.currency || '₾';
-  document.getElementById('kicker').textContent = c.hero_kicker;
-  document.getElementById('title').textContent = c.hero_title;
-  document.getElementById('text').textContent = c.hero_text;
-  document.getElementById('cta').textContent = c.hero_cta;
-  document.getElementById('menu-note').textContent = c.menu_note;
-  document.getElementById('del-title').textContent = c.delivery_title;
-  document.getElementById('del-text').textContent = c.delivery_text;
+  document.getElementById('kicker').textContent = NC.pick(c, 'hero_kicker');
+  document.getElementById('title').textContent = NC.pick(c, 'hero_title');
+  document.getElementById('text').textContent = NC.pick(c, 'hero_text');
+  document.getElementById('cta').textContent = NC.pick(c, 'hero_cta');
+  document.getElementById('menu-note').textContent = NC.pick(c, 'menu_note');
+  document.getElementById('del-title').textContent = NC.pick(c, 'delivery_title');
+  document.getElementById('del-text').textContent = NC.pick(c, 'delivery_text');
   document.getElementById('footer').textContent = c.footer;
   document.getElementById('menu-day').textContent = NC.dateRu(data.today.date, { weekday: 'long', day: 'numeric', month: 'long' });
 
@@ -294,22 +300,22 @@
   document.getElementById('menu-grid').innerHTML = todaySlots.map(s => `
     <div class="card col dish-card" data-dish="${s.dish ? s.dish.id : ''}">
       <div class="dish-photo" style="${NC.bg(s.dish && s.dish.img)}"></div>
-      <span class="mono">${s.catLabel}</span>
-      <span class="serif dish-name">${NC.esc(s.dish ? s.dish.name : 'уточняется')}</span>
+      <span class="mono">${NC.t(s.catLabel)}</span>
+      <span class="serif dish-name">${NC.esc(s.dish ? NC.pick(s.dish, 'name') : '—')}</span>
       <span class="muted dish-macros">${s.dish ? NC.macros(s.dish) + ' · ' + s.dish.weight + ' г' : ''}</span>
     </div>`).join('');
 
   document.getElementById('steps').innerHTML = (c.steps || []).map(s => `
     <div class="col" style="gap:12px;padding-top:18px;border-top:1px solid var(--gold)">
       <span class="mono" style="color:var(--plum)">${s.n}</span>
-      <span class="serif" style="font-size:23px">${NC.esc(s.t)}</span>
-      <span class="muted" style="font-size:13.5px;line-height:1.6">${NC.esc(s.d)}</span>
+      <span class="serif" style="font-size:23px">${NC.esc(NC.pick(s, 't'))}</span>
+      <span class="muted" style="font-size:13.5px;line-height:1.6">${NC.esc(NC.pick(s, 'd'))}</span>
     </div>`).join('');
 
   document.getElementById('tariff-grid').innerHTML = data.tariffs.map(t => `
     <a class="card col" href="/order.html?tariff=${t.id}" style="gap:16px;border:1px solid var(--line);padding:30px">
       <span class="mono">${t.code}</span>
-      <span class="serif" style="font-size:32px">${NC.esc(t.name)}</span>
+      <span class="serif" style="font-size:32px">${NC.esc(NC.pick(t, 'name'))}</span>
       <div class="row" style="align-items:baseline;gap:8px">
         <span class="serif" style="font-size:44px">${t.perDay}</span>
         <span class="muted" style="font-size:13px">${NC.cur} в день</span>
@@ -318,7 +324,7 @@
         <span>${t.meals} приёма пищи в день</span><span>${t.days} дней рациона</span><span>График доставки на выбор</span>
       </div>
       <div class="row" style="justify-content:space-between;align-items:baseline;padding-top:16px;border-top:1px solid var(--gold);margin-top:auto">
-        <span class="mono">Итого</span><span class="serif" style="font-size:26px">${'от ' + NC.money((data.tariffsFrom.find(x => x.id === t.id) || {}).from ?? t.perDay * t.days)}</span>
+        <span class="mono">Итого</span><span class="serif" style="font-size:26px">${NC.t('от') + ' ' + NC.money((data.tariffsFrom.find(x => x.id === t.id) || {}).from ?? t.perDay * t.days)}</span>
       </div>
     </a>`).join('');
   document.querySelectorAll('#tariff-grid a').forEach(a => a.style.borderBottom = '1px solid var(--line)');
@@ -328,8 +334,8 @@
     const rev = (await NC.api('/api/reviews')).reviews || [];
     if (rev.length) {
       document.getElementById('reviews').hidden = false;
-      document.getElementById('rev-title').textContent = c.reviews_title || 'Что говорят о блюдах';
-      document.getElementById('rev-note').textContent = c.reviews_note || '';
+      document.getElementById('rev-title').textContent = NC.pick(c, 'reviews_title') || 'Что говорят о блюдах';
+      document.getElementById('rev-note').textContent = NC.pick(c, 'reviews_note') || '';
       const track = document.getElementById('rev-track');
       track.innerHTML = rev.map(r => `
         <div class="rev">
@@ -358,14 +364,14 @@
     const ex = (await NC.api('/api/extras')).extras || [];
     if (ex.length) {
       document.getElementById('extra').hidden = false;
-      if (c.extra_title) document.getElementById('x-title').textContent = c.extra_title;
-      document.getElementById('x-text').textContent = c.extra_text || '';
+      if (c.extra_title) document.getElementById('x-title').textContent = NC.pick(c, 'extra_title');
+      document.getElementById('x-text').textContent = NC.pick(c, 'extra_text') || '';
       document.getElementById('x-strip').innerHTML = ex.slice(0, 8).map(e => `
         <a class="x-mini" href="/extra.html" style="border:0">
           <div class="ph" style="${NC.bg(e.img)}">${e.badge ? `<span class="x-badge">${NC.esc(e.badge)}</span>` : ''}</div>
           <div class="col" style="gap:2px">
-            <b>${NC.esc(e.name)}</b>
-            ${e.unit ? `<s>${NC.esc(e.unit)}</s>` : ''}
+            <b>${NC.esc(NC.pick(e, 'name'))}</b>
+            ${e.unit ? `<s>${NC.esc(NC.pick(e, 'unit'))}</s>` : ''}
             <span class="pr">${NC.money(e.price)}</span>
           </div>
         </a>`).join('');

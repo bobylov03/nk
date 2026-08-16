@@ -22,7 +22,7 @@
 
 <div class="nav" id="nav">
   <a href="/" style="border:0" id="logo"></a>
-  <nav id="nav-menu">
+  <nav id="nav-menu" data-tr>
     <a href="/#menu" style="border:0">Меню дня</a>
     <a href="/#how" style="border:0">Как это работает</a>
     <a href="/#tariffs" style="border:0">Тарифы</a>
@@ -33,6 +33,7 @@
     <a class="btn ghost sm" href="/cabinet.html" style="border-bottom:1px solid rgba(74,36,61,.28)">Моя кухня</a>
     <a class="btn sm" href="/order.html" style="border:0">Оформить рацион</a>
   </div>
+  <div id="lang-box"></div>
   <button class="burger" id="burger" aria-label="Меню" aria-expanded="false" aria-controls="nav-menu"><i></i></button>
 </div>
 
@@ -61,18 +62,23 @@
   <span class="mono" id="footer"></span>
 </div>
 
+<script src="/js/i18n.js"></script>
 <script src="/js/nc.js"></script>
 <script src="/js/nav.js"></script>
 <script>
 (async function () {
   document.getElementById('logo').innerHTML = NC.logo();
+  document.getElementById('lang-box').innerHTML = NCI18N.switcher();
+  NCI18N.bind();
+  NCI18N.apply();
+
   const c = (await NC.api('/api/public')).content;
   document.getElementById('footer').textContent = c.footer || '';
   document.getElementById('updated').textContent = c.terms_updated ? 'Действуют с ' + c.terms_updated : '';
   NC.socials(document.getElementById('socials'), c);
 
   /* формат: «## Заголовок», строки текста, «• пункт списка» */
-  const blocks = String(c.terms || '').split(/\n(?=##\s)/).map(b => b.trim()).filter(Boolean);
+  const blocks = String(NC.pick(c, 'terms') || '').split(/\n(?=##\s)/).map(b => b.trim()).filter(Boolean);
   const slug = (i) => 'p' + (i + 1);
 
   document.getElementById('body').innerHTML = blocks.map((b, i) => {

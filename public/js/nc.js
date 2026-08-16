@@ -1,6 +1,10 @@
 /* Общие помощники: запросы, хранение токена, мелкий DOM */
 const NC = {
   cur: '₾',
+  /* короткие обёртки над модулем переводов */
+  t: (s) => (window.NCI18N ? NCI18N.t(s) : s),
+  pick: (o, f) => (window.NCI18N ? NCI18N.pick(o, f) : (o ? o[f] || '' : '')),
+  lang: () => (window.NCI18N ? NCI18N.lang : 'ru'),
   token: () => localStorage.getItem('nc_token') || '',
   setToken: (t) => localStorage.setItem('nc_token', t),
   clientId: () => localStorage.getItem('nc_client') || '',

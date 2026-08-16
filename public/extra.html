@@ -23,7 +23,7 @@
 
 <div class="nav" id="nav">
   <a href="/" style="border:0" id="logo"></a>
-  <nav id="nav-menu">
+  <nav id="nav-menu" data-tr>
     <a href="/#menu" style="border:0">Меню дня</a>
     <a href="/collection.html" style="border:0">Коллекция</a>
     <a href="/extra.html" style="border:0">NC EXTRA</a>
@@ -34,6 +34,7 @@
     <a class="btn ghost sm" href="/cabinet.html" style="border-bottom:1px solid rgba(74,36,61,.28)">Моя кухня</a>
     <a class="btn sm" href="/order.html" style="border:0">Оформить рацион</a>
   </div>
+  <div id="lang-box"></div>
   <button class="burger" id="burger" aria-label="Меню" aria-expanded="false" aria-controls="nav-menu"><i></i></button>
 </div>
 
@@ -68,18 +69,23 @@
   <a class="mono" href="/terms.html" style="border-bottom:1px solid var(--line)">Условия сервиса</a>
 </div>
 
+<script src="/js/i18n.js"></script>
 <script src="/js/nc.js"></script>
 <script src="/js/nav.js"></script>
 <script>
 (async function () {
   document.getElementById('logo').innerHTML = NC.logo();
+  document.getElementById('lang-box').innerHTML = NCI18N.switcher();
+  NCI18N.bind();
+  NCI18N.apply();
+
   const pub = await NC.api('/api/public');
   const c = pub.content;
   NC.cur = c.currency || '₾';
   document.getElementById('footer').textContent = c.footer || '';
   NC.socials(document.getElementById('socials'), c);
-  if (c.extra_title) document.getElementById('x-title').textContent = c.extra_title;
-  if (c.extra_text) document.getElementById('x-text').textContent = c.extra_text;
+  const xt = NC.pick(c, 'extra_title'); if (xt) document.getElementById('x-title').textContent = xt;
+  const xx = NC.pick(c, 'extra_text'); if (xx) document.getElementById('x-text').textContent = xx;
 
   // если клиент вошёл — показываем его цену и ближайшую доставку
   let data = null, member = false;
@@ -107,16 +113,16 @@
         ${e.stock !== null && e.stock <= 5 ? `<span class="x-stock">осталось ${e.stock}</span>` : ''}
       </div>
       <div class="col" style="gap:5px;flex:1">
-        <span class="serif" style="font-size:20px;line-height:1.15">${NC.esc(e.name)}</span>
-        ${e.desc ? `<span class="muted" style="font-size:12.5px;line-height:1.5">${NC.esc(e.desc)}</span>` : ''}
-        ${e.unit ? `<span class="mono" style="font-size:9px">${NC.esc(e.unit)}</span>` : ''}
+        <span class="serif" style="font-size:20px;line-height:1.15">${NC.esc(NC.pick(e, 'name'))}</span>
+        ${e.desc ? `<span class="muted" style="font-size:12.5px;line-height:1.5">${NC.esc(NC.pick(e, 'desc'))}</span>` : ''}
+        ${e.unit ? `<span class="mono" style="font-size:9px">${NC.esc(NC.pick(e, 'unit'))}</span>` : ''}
       </div>
       <div class="x-price">
         <span class="serif ${member && e.priceMember ? 'was' : ''}">${NC.money(e.price)}</span>
-        ${e.priceMember ? `<span class="mono">${member ? 'ваша цена ' + NC.money(e.priceMember) : NC.money(e.priceMember) + ' с активным рационом'}</span>` : ''}
+        ${e.priceMember ? `<span class="mono">${member ? NC.t('ваша цена') + ' ' + NC.money(e.priceMember) : NC.money(e.priceMember) + ' ' + NC.t('с активным рационом')}</span>` : ''}
       </div>
       <a class="btn ghost sm" href="/cabinet.html">Добавить</a>
-    </article>`).join('') || '<span class="muted">Сейчас доступных позиций нет — загляните позже.</span>';
+    </article>`).join('') || '<span class="muted">' + NC.t('Сейчас доступных позиций нет — загляните позже.') + '</span>';
 })();
 </script>
 </body>

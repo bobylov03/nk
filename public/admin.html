@@ -658,6 +658,14 @@ function extraEditor() {
     <label><span class="mono">Название</span><input data-xe="name" value="${NC.esc(e.name || '')}" placeholder="Хлеб на закваске"></label>
     <label><span class="mono">Короткое описание</span><input data-xe="desc" value="${NC.esc(e.desc || '')}" placeholder="Пшенично-ржаной, длительная ферментация"></label>
     <label><span class="mono">Вес или объём</span><input data-xe="unit" value="${NC.esc(e.unit || '')}" placeholder="≈ 500 г"></label>
+    <div class="de-grid">
+      <label><span class="mono">Название · EN</span><input data-xe="name_en" value="${NC.esc(e.name_en || '')}"></label>
+      <label><span class="mono">Название · KA</span><input data-xe="name_ka" value="${NC.esc(e.name_ka || '')}"></label>
+    </div>
+    <div class="de-grid">
+      <label><span class="mono">Описание · EN</span><input data-xe="desc_en" value="${NC.esc(e.desc_en || '')}"></label>
+      <label><span class="mono">Описание · KA</span><input data-xe="desc_ka" value="${NC.esc(e.desc_ka || '')}"></label>
+    </div>
 
     <div class="de-grid">
       <label><span class="mono">Цена</span><input data-xe="price" value="${e.price || ''}" inputmode="decimal"></label>
@@ -738,6 +746,10 @@ function dishEditor() {
     </div>
 
     <label><span class="mono">Название</span><input data-de="name" value="${NC.esc(d.name || '')}" placeholder="Лосось на гриле"></label>
+    <div class="de-grid">
+      <label><span class="mono">EN</span><input data-de="name_en" value="${NC.esc(d.name_en || '')}" placeholder="Grilled salmon"></label>
+      <label><span class="mono">KA</span><input data-de="name_ka" value="${NC.esc(d.name_ka || '')}" placeholder="შემწვარი ორაგული"></label>
+    </div>
 
     <div class="de-grid">
       <label><span class="mono">Категория</span><select data-de="cat">
@@ -760,6 +772,10 @@ function dishEditor() {
     <label><span class="mono">Состав</span>
       <textarea data-de="ing" placeholder="лосось, брокколи, лимон, оливковое масло">${NC.esc(d.ing || '')}</textarea>
       <span class="muted" style="font-size:11px">Через запятую. По составу определяются аллергены и статистика клиента.</span></label>
+    <div class="de-grid">
+      <label><span class="mono">Состав · EN</span><input data-de="ing_en" value="${NC.esc(d.ing_en || '')}"></label>
+      <label><span class="mono">Состав · KA</span><input data-de="ing_ka" value="${NC.esc(d.ing_ka || '')}"></label>
+    </div>
 
     <label><span class="mono">Особенности питания</span>
       <input data-de="tags" value="${NC.esc((d.tags || []).join(', '))}" placeholder="без глютена, веган">
@@ -767,9 +783,17 @@ function dishEditor() {
 
     <label><span class="mono">Описание</span>
       <textarea data-de="desc" placeholder="Что это за блюдо и как готовится">${NC.esc(d.desc || '')}</textarea></label>
+    <div class="de-grid">
+      <label><span class="mono">Описание · EN</span><textarea data-de="desc_en">${NC.esc(d.desc_en || '')}</textarea></label>
+      <label><span class="mono">Описание · KA</span><textarea data-de="desc_ka">${NC.esc(d.desc_ka || '')}</textarea></label>
+    </div>
 
     <label><span class="mono">Заметка шефа</span>
       <textarea data-de="why" placeholder="Почему это блюдо в рационе">${NC.esc(d.why || '')}</textarea></label>
+    <div class="de-grid">
+      <label><span class="mono">Заметка · EN</span><textarea data-de="why_en">${NC.esc(d.why_en || '')}</textarea></label>
+      <label><span class="mono">Заметка · KA</span><textarea data-de="why_ka">${NC.esc(d.why_ka || '')}</textarea></label>
+    </div>
 
     <div class="row" style="gap:9px;flex-wrap:wrap">
       <button class="btn" id="de-save" style="flex:1">Сохранить</button>
@@ -816,6 +840,11 @@ function content() {
     ['cycle_cta', 'Завершение цикла — кнопка', 1],
     ['terms_updated', 'Условия сервиса — дата вступления в силу', 1],
     ['terms', 'Условия сервиса. «## » — заголовок раздела, «• » — пункт списка', 20],
+    ['hero_title_en', 'EN · Заголовок главной', 2], ['hero_title_ka', 'KA · Заголовок главной', 2],
+    ['hero_text_en', 'EN · Описание', 3], ['hero_text_ka', 'KA · Описание', 3],
+    ['extra_title_en', 'EN · NC EXTRA — заголовок', 1], ['extra_title_ka', 'KA · NC EXTRA — заголовок', 1],
+    ['extra_text_en', 'EN · NC EXTRA — текст', 3], ['extra_text_ka', 'KA · NC EXTRA — текст', 3],
+    ['terms_en', 'EN · Условия сервиса', 12], ['terms_ka', 'KA · Условия сервиса', 12],
     ['social_tg', 'Telegram — ссылка', 1], ['social_ig', 'Instagram — ссылка', 1], ['social_wa', 'WhatsApp — ссылка', 1], ['social_tt', 'TikTok — ссылка', 1]];
   return `<div class="grid" style="grid-template-columns:1.1fr .9fr">
     <div class="col" style="gap:14px">
@@ -1005,6 +1034,8 @@ function wire() {
       const body = {
         name: d.name, cat: d.cat, cuisine: d.cuisine, ing: d.ing, img: d.img,
         desc: d.desc, why: d.why, tags: d.tags,
+        name_en: d.name_en, name_ka: d.name_ka, ing_en: d.ing_en, ing_ka: d.ing_ka,
+        desc_en: d.desc_en, desc_ka: d.desc_ka, why_en: d.why_en, why_ka: d.why_ka,
         kcal: d.kcal, p: d.p, f: d.f, c: d.c, weight: d.weight, price: d.price
       };
       try {
